@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Chargement Flowise.js</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .success {
+            background: #10b981;
+        }
+
+        .error {
+            background: #ef4444;
+        }
+
+        .warning {
+            background: #f59e0b;
+        }
+
+        .info {
+            background: #3b82f6;
+        }
+
+        pre {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 20px 0;
+            border: 1px solid #4b5563;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #4b5563;
+        }
+
+        th {
+            background: #374151;
+            font-weight: bold;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 Test de Chargement Flowise.js</h1>
+
+    <div id="status"></div>
+
+    <h2>📋 Tables de Test</h2>
+
+    <!-- Table Flowise (déclencheur) -->
+    <table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+        <thead>
+            <tr>
+                <th>Flowise</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Gestion stratégique</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Table Rubrique + Description (devrait être collectée) -->
+    <div class="prose prose-base dark:prose-invert max-w-none">
+        <table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+            <thead>
+                <tr>
+                    <th>Rubrique</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Test 1</td>
+                    <td>Ceci concerne la Gestion stratégique de l'entreprise</td>
+                </tr>
+                <tr>
+                    <td>Test 2</td>
+                    <td>Autre information importante</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Autre table Rubrique + Description -->
+    <div class="prose prose-base dark:prose-invert max-w-none">
+        <table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+            <thead>
+                <tr>
+                    <th>Rubrique</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Processus</td>
+                    <td>La Gestion stratégique inclut la planification</td>
+                </tr>
+                <tr>
+                    <td>Objectifs</td>
+                    <td>Définir les objectifs stratégiques</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2>📊 Résultats du Diagnostic</h2>
+    <pre id="results"></pre>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+
+        function addStatus(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            statusDiv.appendChild(div);
+        }
+
+        function log(message) {
+            resultsDiv.textContent += message + '\n';
+            console.log(message);
+        }
+
+        // Attendre que le DOM soit chargé
+        window.addEventListener('DOMContentLoaded', () => {
+            addStatus('✅ DOM chargé', 'success');
+
+            // Attendre 2 secondes pour que Flowise.js s'initialise
+            setTimeout(() => {
+                log('═══════════════════════════════════════');
+                log('🔍 DIAGNOSTIC FLOWISE.JS');
+                log('═══════════════════════════════════════\n');
+
+                // Vérifier si le script est chargé
+                const scripts = Array.from(document.querySelectorAll('script'));
+                const flowiseScript = scripts.find(s => s.src && s.src.includes('Flowise.js'));
+
+                if (flowiseScript) {
+                    log('✅ Script Flowise.js trouvé: ' + flowiseScript.src);
+                    addStatus('✅ Script Flowise.js chargé', 'success');
+                } else {
+                    log('❌ Script Flowise.js NON trouvé!');
+                    addStatus('❌ Script Flowise.js NON chargé', 'error');
+                }
+
+                // Vérifier les tables
+                log('\n📋 Analyse des tables:');
+                const allTables = document.querySelectorAll('table.min-w-full.border.border-gray-200.dark\\:border-gray-700.rounded-lg');
+                log(`   Tables trouvées: ${allTables.length}`);
+
+                allTables.forEach((table, index) => {
+                    const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
+                    log(`   Table ${index + 1}: [${headers.join(', ')}]`);
+                });
+
+                // Chercher la table Flowise
+                log('\n🔍 Recherche table Flowise:');
+                let flowiseTable = null;
+                let flowiseKeyword = null;
+
+                for (const table of allTables) {
+                    const headers = Array.from(table.querySelectorAll('th')).map(th =>
+                        th.textContent.trim().toLowerCase()
+                    );
+
+                    if (headers.includes('flowise')) {
+                        flowiseTable = table;
+                        const firstRow = table.querySelector('tbody tr');
+                        if (firstRow) {
+                            const firstCell = firstRow.querySelector('td');
+                            if (firstCell) {
+                                flowiseKeyword = firstCell.textContent.trim();
+                                log(`   ✅ Table Flowise trouvée!`);
+                                log(`   Mot-clé: "${flowiseKeyword}"`);
+                                addStatus(`✅ Table Flowise détectée: "${flowiseKeyword}"`, 'success');
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!flowiseTable) {
+                    log('   ❌ Table Flowise NON trouvée!');
+                    addStatus('❌ Table Flowise NON détectée', 'error');
+                }
+
+                // Chercher les tables correspondantes
+                if (flowiseKeyword) {
+                    log('\n🎯 Recherche tables correspondantes:');
+                    let matchCount = 0;
+
+                    allTables.forEach((table, index) => {
+                        const headers = Array.from(table.querySelectorAll('th')).map(th =>
+                            th.textContent.trim().toLowerCase()
+                        );
+
+                        if (headers.includes('rubrique') && headers.includes('description')) {
+                            const descriptionIndex = headers.indexOf('description');
+                            const allRows = table.querySelectorAll('tbody tr');
+
+                            for (const row of allRows) {
+                                const cells = row.querySelectorAll('td');
+                                if (cells[descriptionIndex]) {
+                                    const text = cells[descriptionIndex].textContent.trim();
+                                    if (text.toLowerCase().includes(flowiseKeyword.toLowerCase())) {
+                                        matchCount++;
+                                        log(`   ✅ Table ${index + 1} MATCH!`);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    log(`\n📊 Total tables correspondantes: ${matchCount}`);
+
+                    if (matchCount > 0) {
+                        addStatus(`✅ ${matchCount} table(s) correspondante(s) trouvée(s)`, 'success');
+                    } else {
+                        addStatus('⚠️ Aucune table correspondante trouvée', 'warning');
+                    }
+                }
+
+                // Vérifier les logs de la console
+                log('\n💡 Vérifier la console du navigateur pour:');
+                log('   - Messages d\'initialisation de Flowise.js');
+                log('   - Logs de détection de tables');
+                log('   - Erreurs éventuelles');
+
+                log('\n═══════════════════════════════════════');
+                log('✅ DIAGNOSTIC TERMINÉ');
+                log('═══════════════════════════════════════');
+
+            }, 2000);
+        });
+    </script>
+
+    <!-- Charger Flowise.js -->
+    <script src="/Flowise.js"></script>
+</body>
+
+</html>

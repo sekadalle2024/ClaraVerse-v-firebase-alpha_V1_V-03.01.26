@@ -116,7 +116,8 @@ createConsolidationTable(table) {
     }
 
     const consoTable = document.createElement("table");
-    consoTable.className = "claraverse-conso-table";
+    // ✅ HARMONISATION CSS : Utiliser les mêmes classes que les autres tables Claraverse
+    consoTable.className = "min-w-full border border-gray-200 dark:border-gray-700 rounded-lg claraverse-conso-table";
 
     // ✅ NOUVEAU : Assigner un ID stable pour IndexedDB
     const tableId = this.generateTableId(table);
@@ -125,26 +126,22 @@ createConsolidationTable(table) {
     consoTable.dataset.sourceTable = table.dataset.tableId || tableId;
 
     consoTable.style.cssText = `
-        width: 100%;
-        margin-bottom: 20px;
-        border-collapse: collapse;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border: 2px solid #007bff;
-        border-radius: 8px;
-        overflow: hidden;
+        margin-bottom: 1.5rem;
+        border-collapse: separate;
+        border-spacing: 0;
     `;
 
     consoTable.innerHTML = `
         <thead>
             <tr>
-                <th style="background: linear-gradient(135deg, #007bff, #0056b3); color: white; padding: 15px; text-align: left; font-weight: bold;">
+                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style="border-top-left-radius: 0.5rem; border-top-right-radius: 0.5rem;">
                     📊 Table de Consolidation
                 </th>
             </tr>
         </thead>
         <tbody>
             <tr>
-                <td id="conso-content-${tableId}" style="padding: 15px; background: #f8f9fa; min-height: 50px;">
+                <td id="conso-content-${tableId}" class="px-4 py-3 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700" style="min-height: 50px; border-bottom-left-radius: 0.5rem; border-bottom-right-radius: 0.5rem;">
                     ⏳ En attente de consolidation...
                 </td>
             </tr>

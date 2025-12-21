@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧹 Nettoyage LocalStorage - MAINTENANT</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .container {
+            background: white;
+            color: #333;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+        }
+
+        .alert {
+            background: #ff6b6b;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        .success {
+            background: #51cf66;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            width: calc(50% - 10px);
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button.danger {
+            background: #ff6b6b;
+        }
+
+        button.danger:hover {
+            background: #ee5a52;
+        }
+
+        #console {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+            white-space: pre-wrap;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧹 Nettoyage LocalStorage</h1>
+
+        <div class="alert">
+            ⚠️ Votre localStorage est SATURÉ (5119.93 KB)<br>
+            Cela empêche l'envoi vers n8n !
+        </div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="currentSize">...</div>
+                <div class="stat-label">Utilisation Actuelle (KB)</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="itemCount">...</div>
+                <div class="stat-label">Nombre d'Items</div>
+            </div>
+        </div>
+
+        <h2>🎯 Actions Rapides</h2>
+
+        <button onclick="nettoyageCachesN8n()">
+            🗑️ Nettoyer Caches N8N
+        </button>
+
+        <button onclick="nettoyageComplet()">
+            🧹 Nettoyage Complet
+        </button>
+
+        <button onclick="viderTout()" class="danger">
+            ⚠️ TOUT VIDER (Danger!)
+        </button>
+
+        <button onclick="analyser()">
+            📊 Analyser
+        </button>
+
+        <div id="result"></div>
+
+        <h2>📊 Console</h2>
+        <div id="console"></div>
+    </div>
+
+    <script>
+        const consoleDiv = document.getElementById('console');
+        const resultDiv = document.getElementById('result');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                'success': '#51cf66',
+                'error': '#ff6b6b',
+                'warning': '#ffd43b',
+                'info': '#74c0fc'
+            };
+            const color = colors[type] || colors.info;
+
+            consoleDiv.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        function updateStats() {
+            let total = 0;
+            let count = 0;
+
+            for (let key in localStorage) {
+                if (localStorage.hasOwnProperty(key)) {
+                    total += (localStorage[key].length * 2) / 1024;
+                    count++;
+                }
+            }
+
+            document.getElementById('currentSize').textContent = total.toFixed(2);
+            document.getElementById('itemCount').textContent = count;
+
+            return { total, count };
+        }
+
+        function showResult(message, type) {
+            resultDiv.className = type;
+            resultDiv.innerHTML = message;
+        }
+
+        function nettoyageCachesN8n() {
+            log('🗑️ Nettoyage des caches n8n...', 'info');
+
+            let count = 0;
+            let freed = 0;
+
+            for (let key in localStorage) {
+                if (key.startsWith('n8n_')) {
+                    const size = (localStorage[key].length * 2) / 1024;
+                    localStorage.removeItem(key);
+                    count++;
+                    freed += size;
+                    log(`   ✅ Supprimé: ${key} (${size.toFixed(2)} KB)`, 'success');
+                }
+            }
+
+            log(`✅ ${count} cache(s) n8n supprimé(s)`, 'success');
+            log(`💾 ${freed.toFixed(2)} KB libérés`, 'success');
+
+            updateStats();
+            showResult(`✅ ${count} cache(s) supprimé(s) - ${freed.toFixed(2)} KB libérés`, 'success');
+        }
+
+        function nettoyageComplet() {
+            log('🧹 Nettoyage complet...', 'info');
+
+            const before = updateStats();
+            let cleaned = 0;
+
+            // 1. Caches n8n
+            log('🗑️ Suppression des caches n8n...', 'info');
+            for (let key in localStorage) {
+                if (key.startsWith('n8n_')) {
+                    localStorage.removeItem(key);
+                    cleaned++;
+                }
+            }
+
+            // 2. Données temporaires
+            log('🗑️ Suppression des données temporaires...', 'info');
+            const tempPrefixes = ['temp_', 'tmp_', 'cache_', 'debug_', 'test_'];
+            for (let key in localStorage) {
+                if (tempPrefixes.some(prefix => key.startsWith(prefix))) {
+                    localStorage.removeItem(key);
+                    cleaned++;
+                }
+            }
+
+            // 3. Anciennes données (> 7 jours)
+            log('🗑️ Suppression des anciennes données...', 'info');
+            const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+            for (let key in localStorage) {
+                if (key.startsWith('conso_') || key.startsWith('table_')) {
+                    try {
+                        const data = JSON.parse(localStorage[key]);
+                        if (data.timestamp && data.timestamp < sevenDaysAgo) {
+                            localStorage.removeItem(key);
+                            cleaned++;
+                        }
+                    } catch (e) { }
+                }
+            }
+
+            const after = updateStats();
+            const freed = before.total - after.total;
+
+            log(`✅ Nettoyage terminé !`, 'success');
+            log(`   - Items supprimés: ${cleaned}`, 'success');
+            log(`   - Espace libéré: ${freed.toFixed(2)} KB`, 'success');
+            log(`   - Avant: ${before.total.toFixed(2)} KB`, 'info');
+            log(`   - Après: ${after.total.toFixed(2)} KB`, 'info');
+
+            showResult(`✅ ${cleaned} items supprimés - ${freed.toFixed(2)} KB libérés`, 'success');
+        }
+
+        function viderTout() {
+            if (confirm('⚠️ ATTENTION ! Cela va supprimer TOUTES les données du localStorage.\n\nVous perdrez:\n- Les tables sauvegardées\n- Les checkboxes CIA\n- Toutes les données conso\n\nContinuer ?')) {
+                log('🗑️ Suppression de TOUT le localStorage...', 'warning');
+
+                const before = updateStats();
+                localStorage.clear();
+                const after = updateStats();
+
+                log('✅ Tout a été supprimé !', 'success');
+                log(`💾 ${before.total.toFixed(2)} KB libérés`, 'success');
+
+                showResult('✅ LocalStorage complètement vidé ! Rechargement dans 3 secondes...', 'success');
+
+                setTimeout(() => {
+                    location.reload();
+                }, 3000);
+            }
+        }
+
+        function analyser() {
+            log('📊 Analyse du localStorage...', 'info');
+
+            const items = [];
+            let total = 0;
+
+            for (let key in localStorage) {
+                if (localStorage.hasOwnProperty(key)) {
+                    const size = (localStorage[key].length * 2) / 1024;
+                    items.push({ key, size });
+                    total += size;
+                }
+            }
+
+            items.sort((a, b) => b.size - a.size);
+
+            log(`📊 Utilisation totale: ${total.toFixed(2)} KB`, 'info');
+            log('📋 Top 10 des plus gros items:', 'info');
+
+            items.slice(0, 10).forEach((item, i) => {
+                log(`   ${i + 1}. ${item.key}: ${item.size.toFixed(2)} KB`, 'info');
+            });
+
+            // Statistiques par type
+            const stats = {
+                n8n: 0,
+                conso: 0,
+                table: 0,
+                other: 0
+            };
+
+            items.forEach(item => {
+                if (item.key.startsWith('n8n_')) stats.n8n += item.size;
+                else if (item.key.startsWith('conso_')) stats.conso += item.size;
+                else if (item.key.startsWith('table_')) stats.table += item.size;
+                else stats.other += item.size;
+            });
+
+            log('\n📊 Répartition par type:', 'info');
+            log(`   - Caches n8n: ${stats.n8n.toFixed(2)} KB`, 'info');
+            log(`   - Données conso: ${stats.conso.toFixed(2)} KB`, 'info');
+            log(`   - Tables: ${stats.table.toFixed(2)} KB`, 'info');
+            log(`   - Autres: ${stats.other.toFixed(2)} KB`, 'info');
+
+            updateStats();
+        }
+
+        // Initialisation
+        log('🚀 Page de nettoyage chargée', 'success');
+        updateStats();
+        analyser();
+    </script>
+</body>
+
+</html>

@@ -1248,35 +1248,16 @@ export class FlowiseTableBridge {
       
       console.log(`Found ${restoredHeaderSignatures.size} unique restored table header signature(s)`);
       
-      // DISABLED: Do not remove any tables - this was causing CIA tables to disappear
-      console.log('⚠️ Duplicate removal DISABLED to preserve all tables including CIA tables');
-      
       // Find and remove non-restored tables with matching headers
       const allTables = document.querySelectorAll('table');
       let removedCount = 0;
       
-      if (false) { // DISABLED - was removing CIA tables
       allTables.forEach(table => {
         const wrapper = table.closest('[data-n8n-table]');
         const isRestored = wrapper?.getAttribute('data-restored') === 'true';
         
         // Skip if this is a restored table
         if (isRestored) {
-          return;
-        }
-        
-        // Check if this is a CIA table (with REPONSE CIA or Reponse_user column) - DO NOT REMOVE
-        const allHeaders = Array.from(table.querySelectorAll('th, td'))
-          .map(h => h.textContent?.trim().toLowerCase() || '');
-        const isCIATable = allHeaders.some(h => 
-          /reponse[_\s]?user/i.test(h) || 
-          /reponse[_\s]?cia/i.test(h) ||
-          h.includes('reponse cia') ||
-          h.includes('reponse_cia')
-        );
-        
-        if (isCIATable) {
-          console.log(`⏭️ Skipping CIA table (not a duplicate) - Headers: ${allHeaders.slice(0, 5).join(', ')}`);
           return;
         }
         
@@ -1306,12 +1287,11 @@ export class FlowiseTableBridge {
           console.warn('Error checking table for duplicates:', error);
         }
       });
-      } // End of DISABLED duplicate removal
       
       if (removedCount > 0) {
         console.log(`✅ Removed ${removedCount} duplicate original table(s)`);
       } else {
-        console.log('ℹ️ No duplicate tables removed (feature disabled to preserve CIA tables)');
+        console.log('ℹ️ No duplicate original tables found');
       }
       
     } catch (error) {

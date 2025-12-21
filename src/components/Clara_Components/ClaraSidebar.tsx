@@ -124,6 +124,17 @@ const ClaraSidebar: React.FC<ClaraSidebarProps> = ({
             </button>
           </div>
 
+          {/* New Chat Button - EN PREMIER pour être toujours visible */}
+          <div className="px-4 pb-3">
+            <button 
+              onClick={onNewChat}
+              className="w-full flex items-center rounded-lg transition-colors bg-sakura-500 hover:bg-sakura-600 text-white px-4 py-3 justify-center gap-2 font-semibold shadow-lg"
+            >
+              <Plus className="w-5 h-5" />
+              <span>New Chat</span>
+            </button>
+          </div>
+
           {/* Search */}
           <div className="px-4 pb-2">
             <div className="relative">
@@ -155,17 +166,6 @@ const ClaraSidebar: React.FC<ClaraSidebarProps> = ({
                 </button>
               ))}
             </div>
-          </div>
-
-          {/* New Chat Button */}
-          <div className="px-2 pb-4">
-            <button 
-              onClick={onNewChat}
-              className="w-full flex items-center rounded-lg transition-colors bg-sakura-500 hover:bg-sakura-600 text-white px-4 py-2 justify-start gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              <span>New Chat</span>
-            </button>
           </div>
 
           {/* Chat History List */}
@@ -293,9 +293,15 @@ const ClaraSidebar: React.FC<ClaraSidebarProps> = ({
           </div>
         </>
       ) : (
-        /* Collapsed State - Logo centré verticalement */
-        <div className="h-full flex flex-col items-center justify-center">
-          <img src="/logo.png" alt="E-audit" className="w-8 h-8 object-contain" />
+        /* Collapsed State - Logo uniquement (cliquable pour afficher la barre des chats) */
+        <div className="h-full flex flex-col items-center py-4">
+          <button
+            onClick={() => setIsExpanded(true)}
+            className="hover:opacity-80 transition-opacity cursor-pointer"
+            title="Afficher l'historique des chats"
+          >
+            <img src="/logo.png" alt="E-audit" className="w-8 h-8 object-contain" />
+          </button>
         </div>
       )}
     </div>

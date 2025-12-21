@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Réponse n8n</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #00ff00;
+        }
+
+        h1 {
+            color: #00ff00;
+            text-align: center;
+        }
+
+        .test-section {
+            background: #1a1a1a;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .success {
+            background: #10b981;
+            color: #fff;
+        }
+
+        .error {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .warning {
+            background: #f59e0b;
+            color: #000;
+        }
+
+        .info {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+
+        button:hover {
+            background: #00cc00;
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        pre {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border: 1px solid #00ff00;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #00ff00;
+            padding-left: 10px;
+        }
+
+        .log-error {
+            border-left-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .log-success {
+            border-left-color: #10b981;
+            color: #10b981;
+        }
+
+        .log-warning {
+            border-left-color: #f59e0b;
+            color: #f59e0b;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 TEST RÉPONSE N8N - DIAGNOSTIC COMPLET</h1>
+
+    <div class="test-section">
+        <h2>⚙️ Configuration</h2>
+        <div id="config">
+            <p><strong>Endpoint:</strong> <span id="endpoint">http://localhost:5678/webhook/htlm_processor</span></p>
+            <p><strong>Méthode:</strong> POST</p>
+            <p><strong>Content-Type:</strong> application/json</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Tests Disponibles</h2>
+        <button onclick="testSimple()">Test 1: Requête Simple</button>
+        <button onclick="testAvecTable()">Test 2: Avec Table HTML</button>
+        <button onclick="testComplet()">Test 3: Scénario Complet</button>
+        <button onclick="clearLogs()">🗑️ Effacer Logs</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Résultats</h2>
+        <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 Logs Détaillés</h2>
+        <div id="logs"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>💡 Diagnostic Automatique</h2>
+        <div id="diagnostic"></div>
+    </div>
+
+    <script>
+        const endpoint = 'http://localhost:5678/webhook/htlm_processor';
+        const resultsDiv = document.getElementById('results');
+        const logsDiv = document.getElementById('logs');
+        const diagnosticDiv = document.getElementById('diagnostic');
+
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = message;
+            resultsDiv.appendChild(div);
+        }
+
+        function addLog(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `log-entry log-${type}`;
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logsDiv.appendChild(div);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function addDiagnostic(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            diagnosticDiv.appendChild(div);
+        }
+
+        function clearLogs() {
+            resultsDiv.innerHTML = '';
+            logsDiv.innerHTML = '';
+            diagnosticDiv.innerHTML = '';
+        }
+
+        async function testSimple() {
+            clearLogs();
+            addLog('🚀 Démarrage Test Simple...', 'info');
+
+            try {
+                addLog('📤 Envoi requête POST...', 'info');
+                const startTime = Date.now();
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ question: 'Test simple' })
+                });
+
+                const elapsed = Date.now() - startTime;
+                addLog(`📥 Réponse reçue en ${elapsed}ms`, 'success');
+
+                // Analyser la réponse
+                await analyzeResponse(response);
+
+            } catch (error) {
+                addLog(`❌ Erreur: ${error.message}`, 'error');
+                addResult(`❌ Test échoué: ${error.message}`, 'error');
+                diagnoseError(error);
+            }
+        }
+
+        async function testAvecTable() {
+            clearLogs();
+            addLog('🚀 Démarrage Test Avec Table...', 'info');
+
+            const tableHTML = `
+                <table class="min-w-full border border-gray-200">
+                    <thead>
+                        <tr>
+                            <th>Rubrique</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Test 1</td>
+                            <td>Ceci concerne la Gestion stratégique</td>
+                        </tr>
+                        <tr>
+                            <td>Test 2</td>
+                            <td>Autre information</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+
+            try {
+                addLog('📤 Envoi table HTML...', 'info');
+                addLog(`📏 Taille: ${tableHTML.length} caractères`, 'info');
+
+                const startTime = Date.now();
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ question: tableHTML })
+                });
+
+                const elapsed = Date.now() - startTime;
+                addLog(`📥 Réponse reçue en ${elapsed}ms`, 'success');
+
+                await analyzeResponse(response);
+
+            } catch (error) {
+                addLog(`❌ Erreur: ${error.message}`, 'error');
+                addResult(`❌ Test échoué: ${error.message}`, 'error');
+                diagnoseError(error);
+            }
+        }
+
+        async function testComplet() {
+            clearLogs();
+            addLog('🚀 Démarrage Test Complet...', 'info');
+
+            // Simuler le scénario réel avec plusieurs tables
+            const fullHTML = `
+                <table class="min-w-full border border-gray-200">
+                    <thead><tr><th>Flowise</th></tr></thead>
+                    <tbody><tr><td>Gestion stratégique</td></tr></tbody>
+                </table>
+                
+                <table class="min-w-full border border-gray-200">
+                    <thead><tr><th>Rubrique</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>Processus</td><td>La Gestion stratégique inclut la planification</td></tr>
+                        <tr><td>Objectifs</td><td>Définir les objectifs stratégiques</td></tr>
+                    </tbody>
+                </table>
+                
+                <table class="min-w-full border border-gray-200">
+                    <thead><tr><th>Rubrique</th><th>Description</th></tr></thead>
+                    <tbody>
+                        <tr><td>Analyse</td><td>Analyse de la Gestion stratégique</td></tr>
+                        <tr><td>Mise en œuvre</td><td>Déploiement des stratégies</td></tr>
+                    </tbody>
+                </table>
+            `;
+
+            try {
+                addLog('📤 Envoi scénario complet...', 'info');
+                addLog(`📏 Taille: ${fullHTML.length} caractères`, 'info');
+                addLog('📋 3 tables incluses', 'info');
+
+                const startTime = Date.now();
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ question: fullHTML })
+                });
+
+                const elapsed = Date.now() - startTime;
+                addLog(`📥 Réponse reçue en ${elapsed}ms`, 'success');
+
+                await analyzeResponse(response);
+
+            } catch (error) {
+                addLog(`❌ Erreur: ${error.message}`, 'error');
+                addResult(`❌ Test échoué: ${error.message}`, 'error');
+                diagnoseError(error);
+            }
+        }
+
+        async function analyzeResponse(response) {
+            // 1. Status Code
+            addLog(`📊 Status Code: ${response.status} ${response.statusText}`,
+                response.status === 200 ? 'success' : 'error');
+
+            if (response.status !== 200) {
+                addResult(`❌ Status non-200: ${response.status}`, 'error');
+                addDiagnostic('⚠️ Le workflow n8n n\'est peut-être pas actif', 'warning');
+                return;
+            }
+
+            // 2. Headers
+            addLog('📋 Headers de réponse:', 'info');
+            const headers = Object.fromEntries(response.headers.entries());
+            for (const [key, value] of Object.entries(headers)) {
+                addLog(`   ${key}: ${value}`, 'info');
+            }
+
+            // Vérifier Content-Type
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                addLog(`⚠️ Content-Type n'est pas application/json: ${contentType}`, 'warning');
+                addDiagnostic('⚠️ Vérifier les headers dans "Respond to Webhook"', 'warning');
+            }
+
+            // 3. Content-Length
+            const contentLength = response.headers.get('content-length');
+            addLog(`📏 Content-Length: ${contentLength}`, 'info');
+
+            if (contentLength === '0' || contentLength === 0) {
+                addLog('❌ Content-Length est 0!', 'error');
+                addResult('❌ Réponse vide de n8n', 'error');
+                addDiagnostic(`
+                    <strong>🔧 SOLUTION:</strong><br>
+                    Dans n8n, node "Respond to Webhook":<br>
+                    1. Respond With: <strong>"First Incoming Item"</strong><br>
+                    2. PAS "No Response Body"<br>
+                    3. PAS "Text"
+                `, 'error');
+                return;
+            }
+
+            // 4. Lire le body
+            const text = await response.text();
+            addLog(`📄 Body length: ${text.length} caractères`, 'info');
+
+            if (!text || text.trim() === '') {
+                addLog('❌ Body vide!', 'error');
+                addResult('❌ Réponse vide malgré Content-Length', 'error');
+                addDiagnostic('🔧 Vérifier que le workflow retourne bien des données', 'error');
+                return;
+            }
+
+            addLog('📄 Aperçu du body:', 'info');
+            addLog(text.substring(0, 500), 'info');
+
+            // 5. Parser JSON
+            try {
+                const json = JSON.parse(text);
+                addLog('✅ JSON valide!', 'success');
+                addResult('✅ JSON parsé avec succès', 'success');
+
+                // Analyser la structure
+                addLog('🔍 Structure JSON:', 'info');
+                addLog(`   Type: ${Array.isArray(json) ? 'Array' : typeof json}`, 'info');
+
+                if (Array.isArray(json)) {
+                    addLog(`   Longueur: ${json.length}`, 'info');
+                    if (json.length > 0) {
+                        addLog(`   Premier élément: ${JSON.stringify(json[0], null, 2).substring(0, 200)}`, 'info');
+
+                        // Vérifier les clés attendues
+                        const firstItem = json[0];
+                        if (firstItem.output) {
+                            addLog('✅ Clé "output" trouvée', 'success');
+                            addResult('✅ Format standard détecté', 'success');
+                        } else if (firstItem.data) {
+                            addLog('✅ Clé "data" trouvée', 'success');
+                            addResult('✅ Format "Programme de travail" détecté', 'success');
+                        } else {
+                            addLog('⚠️ Ni "output" ni "data" trouvé', 'warning');
+                            addLog(`   Clés disponibles: ${Object.keys(firstItem).join(', ')}`, 'warning');
+                            addDiagnostic('⚠️ Structure JSON inattendue', 'warning');
+                        }
+                    }
+                } else if (typeof json === 'object') {
+                    addLog(`   Clés: ${Object.keys(json).join(', ')}`, 'info');
+
+                    if (json.output) {
+                        addLog('✅ Clé "output" trouvée', 'success');
+                        addResult('✅ Format direct détecté', 'success');
+                    } else if (json.tables) {
+                        addLog('✅ Clé "tables" trouvée', 'success');
+                        addResult('✅ Format "tables" détecté', 'success');
+                    } else {
+                        addLog('⚠️ Structure non standard', 'warning');
+                        addDiagnostic('⚠️ Vérifier le format de sortie du workflow', 'warning');
+                    }
+                }
+
+                // Afficher le JSON complet
+                const pre = document.createElement('pre');
+                pre.textContent = JSON.stringify(json, null, 2);
+                logsDiv.appendChild(pre);
+
+                addResult('✅✅✅ TOUT FONCTIONNE CORRECTEMENT!', 'success');
+                addDiagnostic('✅ n8n est correctement configuré', 'success');
+
+            } catch (parseError) {
+                addLog(`❌ Erreur parsing JSON: ${parseError.message}`, 'error');
+                addResult('❌ JSON invalide', 'error');
+
+                addLog('📄 Contenu reçu (non-JSON):', 'error');
+                const pre = document.createElement('pre');
+                pre.textContent = text;
+                pre.style.color = '#ef4444';
+                logsDiv.appendChild(pre);
+
+                addDiagnostic(`
+                    <strong>🔧 SOLUTION:</strong><br>
+                    Le workflow retourne du texte brut au lieu de JSON<br>
+                    Vérifier le node "Respond to Webhook":<br>
+                    - Response Format doit être JSON<br>
+                    - Pas de conversion en texte
+                `, 'error');
+            }
+        }
+
+        function diagnoseError(error) {
+            if (error.message.includes('Failed to fetch')) {
+                addDiagnostic(`
+                    <strong>🔧 Erreur de connexion:</strong><br>
+                    1. n8n n'est pas démarré → <code>npm run n8n</code><br>
+                    2. Workflow pas actif → Activer dans n8n<br>
+                    3. CORS non configuré → Ajouter headers CORS
+                `, 'error');
+            } else if (error.message.includes('JSON')) {
+                addDiagnostic(`
+                    <strong>🔧 Erreur JSON:</strong><br>
+                    Le node "Respond to Webhook" retourne une réponse vide<br>
+                    Configurer: Respond With = "First Incoming Item"
+                `, 'error');
+            }
+        }
+
+        // Auto-test au chargement
+        window.addEventListener('load', () => {
+            addLog('✅ Page chargée', 'success');
+            addLog('💡 Cliquer sur un bouton de test pour commencer', 'info');
+        });
+    </script>
+</body>
+
+</html>

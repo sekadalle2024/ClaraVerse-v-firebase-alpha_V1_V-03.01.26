@@ -32,14 +32,16 @@ export class ClaraApiService {
   private stopExecution: boolean = false;
 
   // n8n endpoint URL
-  //private n8nEndpoint = "http://localhost:5678/webhook/template";
+  private n8nEndpoint = "http://localhost:5678/webhook/template";
     //private n8nEndpoint = http://localhost:5678/webhook/htlm_processor"";
   //  private n8nEndpoint = "http://localhost:5678/webhook/table";
    //private n8nEndpoint = "http://localhost:5678/webhook/json";
  //private n8nEndpoint = "http://localhost:5678/webhook/cia";
+ 
+   //private n8nEndpoint = "http://localhost:5678/webhook/htlm_processor";
 
 
-private n8nEndpoint = "https://yaheya2708.app.n8n.cloud/webhook/table";
+
 
   // Timeout configurable (en millisecondes)
   private n8nTimeout = 10 * 60 * 1000; // 10 minutes par défaut pour les workflows LLM

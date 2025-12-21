@@ -1,43 +1,13 @@
 // Restauration automatique lors du changement de chat
-// Version améliorée avec détection spécifique des tables CIA
+// Utilise le service flowiseTableService existant
 
 (function () {
-    console.log('🔄 AUTO RESTORE CHAT CHANGE - Démarrage (Version CIA)');
+    console.log('🔄 AUTO RESTORE CHAT CHANGE - Démarrage');
 
     let lastTableCount = 0;
-    let lastCIATableCount = 0;
     let restoreTimeout = null;
     let lastRestoreTime = 0;
     const MIN_RESTORE_INTERVAL = 5000;
-
-    // === UTILITAIRES ===
-
-    /**
-     * Vérifier si une table est une table CIA
-     */
-    function isCIATable(table) {
-        if (!table || table.tagName !== 'TABLE') return false;
-
-        const headers = Array.from(table.querySelectorAll('thead th, thead td, tr:first-child th, tr:first-child td'))
-            .map(h => h.textContent.trim().toLowerCase());
-
-        return headers.some(h => /reponse[_\s]?user/i.test(h));
-    }
-
-    /**
-     * Compter les tables CIA dans le DOM
-     */
-    function countCIATables() {
-        const allTables = document.querySelectorAll('table');
-        return Array.from(allTables).filter(t => isCIATable(t)).length;
-    }
-
-    /**
-     * Vérifier si des tables CIA existent
-     */
-    function hasCIATables() {
-        return countCIATables() > 0;
-    }
 
     // === FONCTION DE RESTAURATION ===
     async function restoreCurrentSession() {
@@ -57,19 +27,9 @@
         isRestoring = true;
 
         lastRestoreTime = now;
-        console.log('🎯 === RESTAURATION VIA ÉVÉNEMENT (CIA) ===');
+        console.log('🎯 === RESTAURATION VIA ÉVÉNEMENT ===');
 
         try {
-            // Compter les tables CIA avant restauration
-            const ciaCount = countCIATables();
-            console.log(`📊 Tables CIA détectées: ${ciaCount}`);
-
-            if (ciaCount === 0) {
-                console.log('⏭️ Aucune table CIA, skip restauration');
-                isRestoring = false;
-                return;
-            }
-
             // Essayer d'obtenir le sessionId depuis sessionStorage
             let sessionId = sessionStorage.getItem('claraverse_stable_session');
 
@@ -93,14 +53,15 @@
                 document.dispatchEvent(new CustomEvent('flowise:table:restore:request', {
                     detail: { sessionId: 'current' }
                 }));
-            } else {
-                console.log(`📍 Session: ${sessionId}`);
-
-                // Déclencher l'événement de restauration
-                document.dispatchEvent(new CustomEvent('flowise:table:restore:request', {
-                    detail: { sessionId }
-                }));
+                return;
             }
+
+            console.log(`📍 Session: ${sessionId}`);
+
+            // Déclencher l'événement de restauration
+            document.dispatchEvent(new CustomEvent('flowise:table:restore:request', {
+                detail: { sessionId }
+            }));
 
             console.log('✅ Événement de restauration déclenché');
             console.log('🎯 === FIN ===');
@@ -112,11 +73,22 @@
             setTimeout(() => {
                 isRestoring = false;
                 console.log('🔓 Flag de restauration désactivé');
-            }, 3000); // Augmenté à 3 secondes pour les tables CIA
+            }, 2000);
         }
     }
 
     // === DÉTECTER LES CHANGEMENTS ===
+    function checkForChanges() {
+        const currentTableCount = document.querySelectorAll('table').length;
+
+        if (currentTableCount !== lastTableCount && currentTableCount > 0) {
+            console.log(`📊 Nombre de tables changé: ${lastTableCount} → ${currentTableCount}`);
+            lastTableCount = currentTableCount;
+            scheduleRestore();
+        }
+
+        lastTableCount = currentTableCount;
+    }
 
     function scheduleRestore() {
         console.log('⏰ Restauration planifiée dans 5 secondes');
@@ -134,37 +106,37 @@
 
     // === INITIALISATION ===
 
+    // Vérifier périodiquement (DÉSACTIVÉ - utilise uniquement MutationObserver)
+    // setInterval(checkForChanges, 500);
+
     // Flag pour éviter les boucles de restauration
     let isRestoring = false;
 
-    // Observer DOM avec détection spécifique des tables CIA
+    // Observer DOM
     const observer = new MutationObserver((mutations) => {
         // Ignorer les mutations pendant la restauration
         if (isRestoring) {
             return;
         }
 
-        const hasNewCIATables = mutations.some(m => {
+        const hasTableChanges = mutations.some(m => {
             return Array.from(m.addedNodes).some(node => {
                 if (node.nodeType === 1) {
-                    // Vérifier si c'est une table CIA
+                    // Ignorer les tables déjà restaurées
                     if (node.tagName === 'TABLE') {
-                        // Ignorer les tables déjà restaurées
                         const container = node.closest('[data-restored-content="true"]');
                         if (container) {
-                            return false;
+                            return false; // Table déjà restaurée, ignorer
                         }
-                        return isCIATable(node);
+                        return true;
                     }
-
                     // Vérifier les sous-éléments
                     const tables = node.querySelectorAll?.('table');
                     if (tables && tables.length > 0) {
-                        // Vérifier si au moins une table CIA non restaurée existe
+                        // Vérifier si au moins une table n'est pas restaurée
                         return Array.from(tables).some(table => {
                             const container = table.closest('[data-restored-content="true"]');
-                            if (container) return false;
-                            return isCIATable(table);
+                            return !container;
                         });
                     }
                 }
@@ -172,10 +144,8 @@
             });
         });
 
-        if (hasNewCIATables) {
-            const currentCIACount = countCIATables();
-            console.log(`🔄 Nouvelles tables CIA détectées (${lastCIATableCount} → ${currentCIACount})`);
-            lastCIATableCount = currentCIACount;
+        if (hasTableChanges) {
+            console.log('🔄 Nouvelles tables NON restaurées détectées');
             scheduleRestore();
         }
     });
@@ -185,20 +155,12 @@
             childList: true,
             subtree: true
         });
-
-        // Initialiser le compteur
-        lastCIATableCount = countCIATables();
-        console.log(`👀 Observer activé - ${lastCIATableCount} table(s) CIA initiale(s)`);
+        console.log('👀 Observer activé');
     }, 1000);
 
     // Exposer pour tests
     window.restoreCurrentSession = restoreCurrentSession;
-    window.countCIATables = countCIATables;
-    window.isCIATable = isCIATable;
 
-    console.log('✅ Auto Restore Chat Change activé (Version CIA)');
-    console.log('💡 Tests disponibles:');
-    console.log('   - window.restoreCurrentSession()');
-    console.log('   - window.countCIATables()');
-    console.log('   - window.isCIATable(table)');
+    console.log('✅ Auto Restore Chat Change activé');
+    console.log('💡 Test: window.restoreCurrentSession()');
 })();

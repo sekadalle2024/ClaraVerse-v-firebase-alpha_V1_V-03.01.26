@@ -8,15 +8,15 @@
 /* Clara specific styles */
 @import "./styles/claraSidebar.css";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* ESPACEMENT FORCE - Doit être APRÈS Tailwind pour override */
+/* ESPACEMENT FORCE - Importé avant Tailwind */
 @import "./espacement-force.css";
 
 /* Style Grok - Masquer la sélection des LLM */
 @import "./styles/grok-style-overrides.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* Custom CSS Variables */
 :root {
@@ -30,6 +30,21 @@
   --sakura-700: #b91c1c;
   --sakura-800: #991b1b;
   --sakura-900: #7f1d1d;
+  --sidebar-bg: #fcfcfc;
+}
+
+/* Mode sombre - Variable sidebar */
+.dark {
+  --sidebar-bg: #111827;
+}
+
+/* Menu principal - Fond forcé pour tous les thèmes */
+.main-nav-menu {
+  background-color: var(--sidebar-bg) !important;
+}
+
+.dark .main-nav-menu {
+  background-color: #111827 !important;
 }
 
 @layer base {

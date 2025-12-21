@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Connexion n8n - Logs Détaillés</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 15px;
+        }
+
+        .console-hint {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔍 Test Connexion n8n - Logs Détaillés</h1>
+
+        <div class="console-hint">
+            <strong>💡 Astuce:</strong> Ouvrez la console du navigateur (F12) pour voir les logs détaillés étape par
+            étape !
+        </div>
+
+        <label for="endpoint">Endpoint n8n:</label>
+        <input type="text" id="endpoint" value="https://xomava4845.app.n8n.cloud/webhook/htlm_processor"
+            placeholder="https://votre-n8n.app.n8n.cloud/webhook/htlm_processor">
+
+        <label for="testData">Données de test (HTML):</label>
+        <textarea id="testData" rows="6"><table>
+  <thead><tr><th>Rubrique</th><th>Description</th></tr></thead>
+  <tbody><tr><td>Test</td><td>Données de test</td></tr></tbody>
+</table></textarea>
+
+        <button onclick="testConnection()">🚀 Tester la Connexion</button>
+        <button onclick="testWithMinimalData()">📋 Test Minimal</button>
+        <button onclick="clearResults()">🗑️ Effacer</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        async function testConnection() {
+            const endpoint = document.getElementById('endpoint').value;
+            const testData = document.getElementById('testData').value;
+            const resultsDiv = document.getElementById('results');
+
+            resultsDiv.innerHTML = '<div class="result info">⏳ Test en cours... (Ouvrez la console F12 pour les détails)</div>';
+
+            console.clear();
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('🚀 DÉBUT DU TEST N8N');
+            console.log('═══════════════════════════════════════════════════════');
+
+            try {
+                // ÉTAPE 1: Préparation
+                console.log('\n📋 ÉTAPE 1: PRÉPARATION');
+                console.log('  ├─ Endpoint:', endpoint);
+                console.log('  ├─ Méthode: POST');
+                console.log('  ├─ Content-Type: application/json');
+                console.log('  └─ Données à envoyer:', testData.substring(0, 100) + '...');
+
+                const payload = { question: testData };
+                const payloadSize = JSON.stringify(payload).length;
+                console.log('  └─ Taille payload:', payloadSize, 'caractères');
+
+                // ÉTAPE 2: Envoi
+                console.log('\n📡 ÉTAPE 2: ENVOI DE LA REQUÊTE');
+                const startTime = Date.now();
+                console.log('  └─ Timestamp:', new Date().toISOString());
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const duration = Date.now() - startTime;
+
+                // ÉTAPE 3: Réception
+                console.log('\n📥 ÉTAPE 3: RÉCEPTION DE LA RÉPONSE');
+                console.log('  ├─ Statut HTTP:', response.status, response.statusText);
+                console.log('  ├─ Durée:', duration + 'ms');
+                console.log('  └─ Headers reçus:');
+                response.headers.forEach((value, key) => {
+                    console.log('      ├─', key + ':', value);
+                });
+
+                // ÉTAPE 4: Lecture du body
+                console.log('\n📄 ÉTAPE 4: LECTURE DU BODY');
+                const responseText = await response.text();
+                console.log('  ├─ Taille reçue:', responseText.length, 'caractères');
+                console.log('  ├─ Est vide?', responseText.length === 0 ? '❌ OUI (PROBLÈME!)' : '✅ NON');
+
+                if (responseText.length > 0) {
+                    console.log('  ├─ Premiers 200 caractères:');
+                    console.log('  │  ', responseText.substring(0, 200));
+                    if (responseText.length > 200) {
+                        console.log('  │   ... (', responseText.length - 200, 'caractères restants)');
+                    }
+                } else {
+                    console.log('  └─ ⚠️ RÉPONSE VIDE - Vérifiez le node "Respond to Webhook" dans n8n');
+                }
+
+                // ÉTAPE 5: Parsing JSON
+                console.log('\n🔍 ÉTAPE 5: PARSING JSON');
+                let jsonData = null;
+                let jsonValid = false;
+                let jsonError = null;
+
+                if (responseText && responseText.trim() !== '') {
+                    try {
+                        jsonData = JSON.parse(responseText);
+                        jsonValid = true;
+                        console.log('  ├─ Parsing:', '✅ SUCCÈS');
+                        console.log('  ├─ Type:', Array.isArray(jsonData) ? 'Array' : typeof jsonData);
+                        if (jsonData && typeof jsonData === 'object') {
+                            console.log('  ├─ Clés:', Object.keys(jsonData).join(', '));
+                        }
+                        console.log('  └─ Contenu:', JSON.stringify(jsonData, null, 2).substring(0, 300));
+                    } catch (e) {
+                        jsonValid = false;
+                        jsonError = e.message;
+                        console.log('  ├─ Parsing:', '❌ ÉCHEC');
+                        console.log('  ├─ Erreur:', e.message);
+                        console.log('  └─ ⚠️ La réponse n\'est pas du JSON valide');
+                    }
+                } else {
+                    console.log('  └─ ⚠️ Impossible de parser - réponse vide');
+                }
+
+                // ÉTAPE 6: Résumé
+                console.log('\n📊 ÉTAPE 6: RÉSUMÉ');
+                console.log('  ├─ HTTP OK?', response.ok ? '✅ OUI' : '❌ NON');
+                console.log('  ├─ Données reçues?', responseText.length > 0 ? '✅ OUI (' + responseText.length + ' car.)' : '❌ NON');
+                console.log('  ├─ JSON valide?', jsonValid ? '✅ OUI' : '❌ NON');
+                console.log('  └─ Durée totale:', duration + 'ms');
+
+                // Affichage dans l'interface
+                if (response.ok && jsonValid && responseText.length > 0) {
+                    console.log('\n✅ RÉSULTAT: SUCCÈS COMPLET');
+                    resultsDiv.innerHTML = `
+                        <div class="result success">
+                            <strong>✅ SUCCÈS COMPLET</strong><br><br>
+                            <strong>📊 Statistiques:</strong><br>
+                            • Statut: ${response.status} ${response.statusText}<br>
+                            • Durée: ${duration}ms<br>
+                            • Taille: <strong>${responseText.length} caractères</strong><br>
+                            • JSON valide: ✅ OUI<br><br>
+                            <strong>📦 Données reçues:</strong><br>
+                            <pre style="max-height: 300px; overflow-y: auto;">${JSON.stringify(jsonData, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    console.log('\n❌ RÉSULTAT: PROBLÈME DÉTECTÉ');
+                    let diagnostic = [];
+                    if (!response.ok) {
+                        diagnostic.push('❌ Erreur HTTP ' + response.status);
+                        console.log('  └─ Erreur HTTP:', response.status, response.statusText);
+                    }
+                    if (responseText.length === 0) {
+                        diagnostic.push('❌ Réponse vide - Ajoutez un node "Respond to Webhook" dans n8n');
+                        console.log('  └─ Réponse vide détectée');
+                    }
+                    if (!jsonValid && responseText.length > 0) {
+                        diagnostic.push('❌ Réponse non-JSON - Configurez le node pour retourner du JSON');
+                        console.log('  └─ JSON invalide:', jsonError);
+                    }
+
+                    resultsDiv.innerHTML = `
+                        <div class="result error">
+                            <strong>❌ PROBLÈME DÉTECTÉ</strong><br><br>
+                            <strong>📊 Statistiques:</strong><br>
+                            • Statut: ${response.status} ${response.statusText}<br>
+                            • Durée: ${duration}ms<br>
+                            • Taille: <strong>${responseText.length} caractères</strong> ${responseText.length === 0 ? '⚠️ VIDE!' : ''}<br>
+                            • JSON valide: ${jsonValid ? '✅ OUI' : '❌ NON'}<br><br>
+                            <strong>🔍 Diagnostic:</strong><br>
+                            ${diagnostic.map(d => '• ' + d).join('<br>')}<br><br>
+                            ${responseText.length > 0 ? `<strong>📄 Réponse brute (${responseText.length} car.):</strong><br><pre style="max-height: 200px; overflow-y: auto;">${responseText.substring(0, 1000)}</pre>` : '<strong>⚠️ Aucune donnée reçue de n8n</strong>'}
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                console.log('\n💥 ERREUR FATALE');
+                console.error('  ├─ Type:', error.name);
+                console.error('  ├─ Message:', error.message);
+                console.error('  └─ Stack:', error.stack);
+
+                resultsDiv.innerHTML = `
+                    <div class="result error">
+                        <strong>💥 ERREUR FATALE</strong><br><br>
+                        <strong>Message:</strong> ${error.message}<br><br>
+                        <strong>🔍 Causes possibles:</strong><br>
+                        • Endpoint n8n inaccessible (vérifiez l'URL)<br>
+                        • CORS non configuré dans n8n<br>
+                        • Workflow n8n désactivé<br>
+                        • Problème réseau<br><br>
+                        <strong>Stack:</strong><br>
+                        <pre style="max-height: 200px; overflow-y: auto; font-size: 10px;">${error.stack}</pre>
+                    </div>
+                `;
+            }
+
+            console.log('\n═══════════════════════════════════════════════════════');
+            console.log('🏁 FIN DU TEST');
+            console.log('═══════════════════════════════════════════════════════\n');
+        }
+
+        async function testWithMinimalData() {
+            document.getElementById('testData').value = '<table><tr><td>Test</td></tr></table>';
+            await testConnection();
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            console.clear();
+        }
+    </script>
+</body>
+
+</html>

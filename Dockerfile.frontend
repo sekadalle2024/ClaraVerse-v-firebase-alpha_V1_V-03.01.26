@@ -1,0 +1,36 @@
+# Dockerfile pour le Frontend E-audit (React/Vite)
+FROM node:20-alpine AS builder
+
+# Définir le répertoire de travail
+WORKDIR /app
+
+# Copier les fichiers de dépendances
+COPY package*.json ./
+
+# Installer les dépendances (utiliser npm install car pas de package-lock.json)
+RUN npm install --legacy-peer-deps
+
+# Copier le SDK (nécessaire pour le build)
+COPY sdk/ ./sdk/
+
+# Copier le reste du code source
+COPY . .
+
+# Build de l'application (avec plus de mémoire pour Node.js)
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+RUN npm run build
+
+# Stage de production avec Nginx
+FROM nginx:alpine
+
+# Copier la configuration Nginx personnalisée
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Copier les fichiers buildés depuis le stage builder
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Exposer le port 80
+EXPOSE 80
+
+# Démarrer Nginx
+CMD ["nginx", "-g", "daemon off;"]

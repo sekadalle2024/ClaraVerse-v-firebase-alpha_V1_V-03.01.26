@@ -1,7 +1,8 @@
 /**
- * Script dynamique pour les tables de critères dans Claraverse - V17.1 (Fix réponse n8n)
- * @version 17.1.0
+ * Script dynamique pour les tables de critères dans Claraverse - V18.0 (Logs détaillés)
+ * @version 18.0.0
  * @description
+ * - V18.0: Structure de logs détaillée et formatée pour traçabilité complète
  * - FIX V17.1: Gestion correcte de tous les formats de réponse n8n (Array, Object, data, output, tables)
  * - Détecte dynamiquement le mot-clé depuis la table "Flowise" elle-même
  * - Plus besoin de SEARCH_KEYWORDS statiques - le mot-clé est extrait de la première ligne de la colonne "Flowise"
@@ -17,12 +18,13 @@
   "use strict";
 
   console.log(
-    "🚀 Initialisation du script dynamique de tables V17.1 (Fix réponse n8n)"
+    "🚀 Initialisation du script dynamique de tables V18.0 (Logs détaillés)"
   );
 
+  //http://localhost:5678/webhook/htlm_processor
   // --- CONFIGURATION CENTRALE ---
   const CONFIG = {
-    N8N_ENDPOINT_URL: "http://localhost:5678/webhook/htlm_processor",
+    N8N_ENDPOINT_URL: "https://barow52161.app.n8n.cloud/webhook/htlm_processor",
     SELECTORS: {
       CHAT_TABLES:
         "table.min-w-full.border.border-gray-200.dark\\:border-gray-700.rounded-lg",
@@ -134,6 +136,19 @@
         console.log("✅ Format détecté: Programme de travail (data)");
         return {
           output: convertStructuredDataToMarkdown(firstItem.data),
+          metadata: firstItem
+        };
+      }
+
+      // Format avec 'tables' dans array
+      if (firstItem && typeof firstItem === 'object' && 'tables' in firstItem && Array.isArray(firstItem.tables)) {
+        console.log("✅ Format détecté: Tables array dans array");
+        const output = firstItem.tables
+          .map(table => table?.markdown || '')
+          .filter(content => content.trim() !== '')
+          .join('\n\n---\n\n');
+        return {
+          output: output || firstItem.output || '',
           metadata: firstItem
         };
       }
@@ -268,6 +283,9 @@
       const allProseDivs = Array.from(document.querySelectorAll(CONFIG.SELECTORS.PARENT_DIV));
       const triggerDivIndex = allProseDivs.findIndex(div => div === triggerContainer);
 
+      console.log(`├─ Index du conteneur déclencheur: ${triggerDivIndex}`);
+      console.log(`├─ Total divs prose: ${allProseDivs.length}`);
+
       if (triggerDivIndex > 0) {
         const precedingDiv = allProseDivs[triggerDivIndex - 1];
         const messageContent = precedingDiv.textContent.trim();
@@ -276,10 +294,12 @@
         const hasKeywords = messageKeywords.some(kw => messageContentLower.includes(kw));
 
         if (hasKeywords) {
-          console.log("✅ Message utilisateur trouvé et validé:", messageContent);
+          console.log(`✅ Message utilisateur trouvé et validé: ${messageContent}`);
           return messageContent;
         } else {
           console.log("ℹ️ Le div précédent ne semble pas contenir un message utilisateur attendu");
+          console.log(`├─ Contenu trouvé: "${messageContent.substring(0, 50)}..."`);
+          console.log(`└─ Mots-clés recherchés: ${messageKeywords.join(", ")}`);
         }
       } else {
         console.log("ℹ️ Aucune div 'prose' ne précède la table déclencheuse");
@@ -321,28 +341,62 @@
 
   /**
    * Collecte les tables de critères basées sur le mot-clé dynamique
+   * VERSION V18.0 avec logs détaillés
    * @param {string} dynamicKeyword - Le mot-clé extrait dynamiquement
    * @param {HTMLElement} triggerTable - La table déclencheuse
    * @param {string} userMessageTableHTML - HTML de la table du message utilisateur
    * @returns {string} HTML consolidé de toutes les tables
    */
   function collectCriteriaTables(dynamicKeyword, triggerTable = null, userMessageTableHTML = '') {
+    console.log("");
+    console.log("═══════════════════════════════════════");
+    console.log("🎯 FIX V18.0 - NOUVELLE LOGIQUE FLOWISE");
+    console.log("═══════════════════════════════════════");
+
     const allDivs = document.querySelectorAll(CONFIG.SELECTORS.PARENT_DIV);
     const collectedTablesHTML = [];
     const keywordVariations = generateKeywordVariations(dynamicKeyword);
+    const tableDetails = [];
 
-    console.log(`🔍 Recherche de divs contenant le mot-clé "${dynamicKeyword}"...`);
+    // ═══════════════════════════════════════════════════════════════
+    // 📋 ÉTAPE 1: Recherche de la table Flowise
+    // ═══════════════════════════════════════════════════════════════
+    console.log("");
+    console.log("📋 ÉTAPE 1: Recherche de la table Flowise");
 
-    allDivs.forEach((div) => {
+    if (triggerTable) {
+      console.log("✅ Table Flowise trouvée!");
+      console.log(`Mot-clé extrait: "${dynamicKeyword}"`);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 📋 ÉTAPE 2: Recherche GLOBALE des tables Rubrique+Description
+    // ═══════════════════════════════════════════════════════════════
+    console.log("");
+    console.log("📋 ÉTAPE 2: Recherche GLOBALE des tables Rubrique+Description");
+    console.log(`Tables totales à analyser: ${allDivs.length}`);
+
+    let criteriaTablesCount = 0;
+    let matchingTablesCount = 0;
+
+    allDivs.forEach((div, divIndex) => {
       const firstTable = div.querySelector(CONFIG.SELECTORS.CHAT_TABLES);
       if (!firstTable) return;
 
-      const headers = Array.from(firstTable.querySelectorAll("th")).map((th) =>
-        th.textContent.trim().toLowerCase()
+      // Récupérer les en-têtes SANS conversion pour supporter toutes les variations de casse
+      const headersOriginal = Array.from(firstTable.querySelectorAll("th")).map((th) =>
+        th.textContent.trim()
       );
+      const headers = headersOriginal.map(h => h.toLowerCase());
 
-      const hasRequiredHeaders = headers.includes("rubrique") && headers.includes("description");
-      if (!hasRequiredHeaders) return;
+      // Vérifier si la table contient "Rubrique" et "Description" (insensible à la casse)
+      const hasRubrique = headers.includes("rubrique");
+      const hasDescription = headers.includes("description");
+      const hasRequiredHeaders = hasRubrique && hasDescription;
+
+      if (!hasRequiredHeaders) {
+        return;
+      }
 
       const cellsOfFirstTable = firstTable.querySelectorAll("td");
       const keywordFound = Array.from(cellsOfFirstTable).some((cell) => {
@@ -353,27 +407,89 @@
       });
 
       if (keywordFound) {
-        console.log(`✅ Div correspondante trouvée pour le mot-clé "${dynamicKeyword}". Collecte des tables...`);
+        matchingTablesCount++;
         const allTablesInDiv = div.querySelectorAll(CONFIG.SELECTORS.CHAT_TABLES);
-        allTablesInDiv.forEach((table) => {
-          collectedTablesHTML.push(table.outerHTML);
+
+        allTablesInDiv.forEach((table, tableIndex) => {
+          const tableHeaders = Array.from(table.querySelectorAll("th")).map(th => th.textContent.trim());
+          const tableRows = table.querySelectorAll("tbody tr").length;
+          const tableHTML = table.outerHTML;
+          const tableSize = tableHTML.length;
+
+          collectedTablesHTML.push(tableHTML);
+          criteriaTablesCount++;
+
+          tableDetails.push({
+            type: "critère",
+            divIndex: divIndex + 1,
+            tableIndex: tableIndex + 1,
+            headers: tableHeaders,
+            rows: tableRows,
+            size: tableSize,
+            preview: tableHTML.substring(0, 100).replace(/\n/g, " ")
+          });
         });
       }
     });
 
+    // ═══════════════════════════════════════════════════════════════
+    // 📊 RÉSULTAT FINAL de la recherche
+    // ═══════════════════════════════════════════════════════════════
+    console.log("");
+    console.log("📊 RÉSULTAT FINAL");
+    console.log(`- Tables Rubrique+Description correspondantes: ${matchingTablesCount}`);
+    console.log(`- Tables collectées: ${criteriaTablesCount}`);
+
+    // Ajout de la table déclencheuse (Flowise)
     if (triggerTable) {
-      console.log(`📋 Ajout de la table déclencheuse pour le mot-clé "${dynamicKeyword}"`);
-      collectedTablesHTML.push(triggerTable.outerHTML);
+      console.log("- Ajout table Flowise: ✅");
+      const triggerHeaders = Array.from(triggerTable.querySelectorAll("th")).map(th => th.textContent.trim());
+      const triggerRows = triggerTable.querySelectorAll("tbody tr").length;
+      const triggerHTML = triggerTable.outerHTML;
+      const triggerSize = triggerHTML.length;
+
+      collectedTablesHTML.push(triggerHTML);
+
+      tableDetails.push({
+        type: "déclencheuse (Flowise)",
+        headers: triggerHeaders,
+        rows: triggerRows,
+        size: triggerSize,
+        keyword: dynamicKeyword,
+        preview: triggerHTML.substring(0, 100).replace(/\n/g, " ")
+      });
     }
 
+    // Ajout de la table user_message
     if (userMessageTableHTML) {
       console.log("📋 Ajout de la table 'user_message' à la collecte");
+      const userMessageSize = userMessageTableHTML.length;
+
       collectedTablesHTML.push(userMessageTableHTML);
+
+      tableDetails.push({
+        type: "user_message",
+        size: userMessageSize,
+        preview: userMessageTableHTML.replace(/<[^>]+>/g, "").substring(0, 100)
+      });
     }
 
     const finalHTML = collectedTablesHTML.join("\n");
     const totalTableCount = (finalHTML.match(/<table/g) || []).length;
+    const totalSize = finalHTML.length;
+
     console.log(`📊 Collecte terminée: ${totalTableCount} table(s) au total`);
+    console.log(`📏 Taille du HTML collecté: ${totalSize} caractères`);
+
+    // ═══════════════════════════════════════════════════════════════
+    // 📄 HTML COMPLET DES TABLES COLLECTÉES
+    // ═══════════════════════════════════════════════════════════════
+    console.log("");
+    console.log("═══════════════════════════════════════════════════════════════");
+    console.log("📄 HTML COMPLET DES TABLES COLLECTÉES");
+    console.log("═══════════════════════════════════════════════════════════════");
+    console.log(finalHTML);
+    console.log("═══════════════════════════════════════════════════════════════");
 
     return finalHTML;
   }
@@ -398,24 +514,118 @@
         return cachedData.data;
       }
 
+      // ═══════════════════════════════════════════════════════════════
+      // 📡 ENVOI DES DONNÉES VERS N8N
+      // ═══════════════════════════════════════════════════════════════
       console.log("📡 Envoi des données vers n8n...");
+      console.log(`🔗 Endpoint: ${CONFIG.N8N_ENDPOINT_URL}`);
+
+      const tableCount = (tablesHTML.match(/<table/g) || []).length;
+      const payloadSize = tablesHTML.length;
+
+      console.log(`📊 Taille des données: ${payloadSize} caractères`);
+      console.log(`🎯 Mot-clé cible: ${targetKeyword}`);
+
+      const payload = { question: tablesHTML };
+      const payloadString = JSON.stringify(payload);
+
+      // Log du payload envoyé (aperçu)
+      const payloadPreview = payloadString.length > 200
+        ? payloadString.substring(0, 200) + "..."
+        : payloadString;
+      console.log(`📦 Payload envoyé: ${payloadPreview}`);
+
+      const startTime = Date.now();
+      const timestamp = new Date().toISOString();
+
       const response = await fetch(CONFIG.N8N_ENDPOINT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json"
         },
-        body: JSON.stringify({ question: tablesHTML }),
+        body: payloadString,
       });
 
+      const duration = Date.now() - startTime;
+
+      // ═══════════════════════════════════════════════════════════════
+      // 📥 RÉCEPTION DE LA RÉPONSE N8N
+      // ═══════════════════════════════════════════════════════════════
+      console.log("");
+      console.log("📥 RÉCEPTION DE LA RÉPONSE N8N");
+      console.log(`├─ Statut HTTP: ${response.status} ${response.statusText}`);
+      console.log(`├─ Durée requête: ${duration}ms`);
+      console.log(`├─ OK: ${response.ok ? "✅ OUI" : "❌ NON"}`);
+
       if (!response.ok) {
+        console.error("❌ ERREUR HTTP DÉTECTÉE");
+        console.error(`├─ Code: ${response.status}`);
+        console.error(`├─ Message: ${response.statusText}`);
+        console.error("└─ Vérifiez que le workflow n8n est actif et accessible");
         throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
       }
 
-      console.log(`✅ Données reçues de l'endpoint n8n ! Statut: ${response.status} OK`);
-      const responseData = await response.json();
+      const responseText = await response.text();
+      const responseSize = responseText.length;
+      const isEmpty = responseSize === 0;
 
-      console.log("📦 Réponse brute n8n:", responseData);
+      console.log(`├─ Taille reçue: ${responseSize} caractères`);
+      console.log(`├─ Est vide? ${isEmpty ? "❌ OUI (PROBLÈME!)" : "✅ NON"}`);
+
+      if (isEmpty) {
+        console.error("❌ RÉPONSE VIDE DÉTECTÉE");
+        console.error("├─ Le workflow n8n n'a retourné aucune donnée");
+        console.error("├─ Causes possibles:");
+        console.error("│  ├─ Node 'Respond to Webhook' manquant");
+        console.error("│  ├─ Node 'Respond to Webhook' mal configuré");
+        console.error("│  └─ Erreur dans le workflow avant le retour");
+        console.error("└─ Action: Vérifiez votre workflow n8n");
+        throw new Error("Réponse n8n vide - vérifiez votre workflow n8n");
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // 🔍 PARSING JSON DE LA RÉPONSE
+      // ═══════════════════════════════════════════════════════════════
+      let responseData;
+
+      try {
+        responseData = JSON.parse(responseText);
+        const dataType = Array.isArray(responseData) ? "Array" : typeof responseData;
+
+        console.log(`├─ Parsing JSON: ✅ SUCCÈS`);
+        console.log(`├─ Type de données: ${dataType}`);
+
+        if (Array.isArray(responseData)) {
+          console.log(`├─ Nombre d'éléments: ${responseData.length}`);
+          if (responseData.length > 0) {
+            console.log(`└─ Clés du premier élément: [${Object.keys(responseData[0]).join(", ")}]`);
+          }
+        } else if (typeof responseData === 'object') {
+          console.log(`└─ Clés racine: [${Object.keys(responseData).join(", ")}]`);
+        }
+
+      } catch (e) {
+        console.error(`├─ Parsing JSON: ❌ ÉCHEC`);
+        console.error(`├─ Erreur: ${e.message}`);
+        console.error(`├─ Contenu reçu (100 premiers car.): ${responseText.substring(0, 100)}`);
+        console.error("└─ La réponse n'est pas du JSON valide");
+        throw new Error(`Réponse n8n invalide (pas du JSON): ${e.message}`);
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // 📊 RÉSUMÉ DE LA COMMUNICATION
+      // ═══════════════════════════════════════════════════════════════
+      console.log("");
+      console.log("╔═══════════════════════════════════════════════════════╗");
+      console.log("║  ✅ COMMUNICATION N8N RÉUSSIE                         ║");
+      console.log("╚═══════════════════════════════════════════════════════╝");
+      console.log(`├─ Endpoint: ${CONFIG.N8N_ENDPOINT_URL}`);
+      console.log(`├─ Tables envoyées: ${tableCount}`);
+      console.log(`├─ Taille envoyée: ${(payloadSize / 1024).toFixed(2)} KB`);
+      console.log(`├─ Taille reçue: ${(responseSize / 1024).toFixed(2)} KB`);
+      console.log(`├─ Durée: ${duration}ms`);
+      console.log(`└─ Timestamp: ${timestamp}`);
 
       saveToCache(cacheKey, responseData, targetKeyword);
 
@@ -636,7 +846,7 @@
 
   /**
    * Traite une table Flowise détectée
-   * VERSION CORRIGÉE avec normalizeN8nResponse
+   * VERSION V18.0 avec logs détaillés et normalizeN8nResponse
    */
   async function processN8nTrigger(triggerTable) {
     const parentDiv = triggerTable.closest(CONFIG.SELECTORS.PARENT_DIV);
@@ -644,21 +854,61 @@
       return;
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // 📋 ÉTAPE 1: EXTRACTION DU MOT-CLÉ DYNAMIQUE
+    // ═══════════════════════════════════════════════════════════════
+    console.log("═══════════════════════════════════════");
+    console.log("🎯 FIX V18.0 - NOUVELLE LOGIQUE FLOWISE");
+    console.log("═══════════════════════════════════════");
+    console.log("");
+    console.log("📋 ÉTAPE 1: Recherche de la table Flowise");
+
     const dynamicKeyword = extractDynamicKeyword(triggerTable);
     if (!dynamicKeyword) {
       console.log("ℹ️ Table Flowise sans mot-clé valide, ignorée");
       return;
     }
 
+    console.log("✅ Table Flowise trouvée!");
+    console.log(`Mot-clé extrait: "${dynamicKeyword}"`);
+    console.log(`✅ Mot-clé extrait: "${dynamicKeyword}"`);
+
+    // ═══════════════════════════════════════════════════════════════
+    // 📋 ÉTAPE 2: MARQUAGE DE LA TABLE
+    // ═══════════════════════════════════════════════════════════════
+    console.log("");
+    console.log("📋 ÉTAPE 2: MARQUAGE DE LA TABLE");
+    console.log(`├─ Classe ajoutée: ${CONFIG.PROCESSED_CLASS}`);
+    console.log("└─ Table marquée comme traitée");
+
     parentDiv.classList.add(CONFIG.PROCESSED_CLASS);
 
     try {
+      // ═══════════════════════════════════════════════════════════════
+      // 📋 ÉTAPE 3: RECHERCHE DU MESSAGE UTILISATEUR
+      // ═══════════════════════════════════════════════════════════════
+      console.log("");
+      console.log("📋 ÉTAPE 3: RECHERCHE DU MESSAGE UTILISATEUR");
+
       const userMessageContent = findAndExtractUserMessage(triggerTable);
       let userMessageTableHTML = "";
 
       if (userMessageContent) {
+        console.log("✅ Message utilisateur trouvé");
+        console.log(`├─ Longueur: ${userMessageContent.length} caractères`);
+        console.log(`└─ Aperçu: ${userMessageContent.substring(0, 100)}...`);
         userMessageTableHTML = createUserMessageTableHTML(userMessageContent);
+      } else {
+        console.log("ℹ️ Aucun message utilisateur trouvé");
       }
+
+      // ═══════════════════════════════════════════════════════════════
+      // 📋 ÉTAPE 4: COLLECTE DES TABLES CORRESPONDANTES
+      // ═══════════════════════════════════════════════════════════════
+      console.log("");
+      console.log("📋 ÉTAPE 4: COLLECTE DES TABLES CORRESPONDANTES");
+      console.log(`├─ Mot-clé à rechercher: ${dynamicKeyword}`);
+      console.log("└─ Lancement de la collecte...");
 
       const criteriaTablesHTML = collectCriteriaTables(dynamicKeyword, triggerTable, userMessageTableHTML);
 
@@ -666,10 +916,47 @@
         throw new Error(`Aucune table de critère trouvée pour le mot-clé : "${dynamicKeyword}"`);
       }
 
+      const tableCount = (criteriaTablesHTML.match(/<table/g) || []).length;
+      const htmlSize = criteriaTablesHTML.length;
+
+      console.log("");
+      console.log("📊 RÉSULTAT FINAL");
+      console.log(`- Tables Rubrique+Description correspondantes: ${tableCount - 2}`);
+      console.log(`- Tables collectées: ${tableCount}`);
+      console.log("- Ajout table Flowise: ✅");
+      if (userMessageTableHTML) {
+        console.log("📋 Ajout de la table 'user_message' à la collecte");
+      }
+      console.log(`📊 Collecte terminée: ${tableCount} table(s) au total`);
+      console.log(`📏 Taille du HTML collecté: ${htmlSize} caractères`);
+
+      // Log du HTML complet collecté
+      console.log("");
+      console.log("═══════════════════════════════════════════════════════════════");
+      console.log("📄 HTML COMPLET DES TABLES COLLECTÉES");
+      console.log("═══════════════════════════════════════════════════════════════");
+      console.log(criteriaTablesHTML);
+      console.log("═══════════════════════════════════════════════════════════════");
+
+      // ═══════════════════════════════════════════════════════════════
+      // 📋 ÉTAPE 5: APPEL À L'ENDPOINT N8N
+      // ═══════════════════════════════════════════════════════════════
+      console.log("");
+      console.log("📋 ÉTAPE 5: APPEL À L'ENDPOINT N8N");
+      console.log(`├─ Endpoint: ${CONFIG.N8N_ENDPOINT_URL}`);
+      console.log(`├─ Taille des données: ${htmlSize} caractères`);
+      console.log("└─ Envoi en cours...");
+
       // Appel à l'endpoint n8n
       const response = await queryN8nEndpoint(criteriaTablesHTML, dynamicKeyword);
 
-      // ⭐ NOUVEAU: Normaliser la réponse pour gérer tous les formats
+      // ═══════════════════════════════════════════════════════════════
+      // 📋 ÉTAPE 6: NORMALISATION DE LA RÉPONSE N8N
+      // ═══════════════════════════════════════════════════════════════
+      console.log("");
+      console.log("📋 ÉTAPE 6: NORMALISATION DE LA RÉPONSE N8N");
+
+      // ⭐ Normaliser la réponse pour gérer tous les formats
       const { output, metadata } = normalizeN8nResponse(response);
 
       if (!output || output.trim() === '') {
@@ -677,8 +964,16 @@
         throw new Error("Réponse de n8n invalide ou vide");
       }
 
-      console.log("🔥 Réponse n8n normalisée:", output.substring(0, 200) + "...");
-      console.log("📊 Métadonnées:", metadata);
+      console.log("✅ Réponse normalisée avec succès");
+      console.log(`├─ Taille output: ${output.length} caractères`);
+      console.log(`├─ Aperçu: ${output.substring(0, 150)}...`);
+      console.log("└─ Métadonnées:", JSON.stringify(metadata).substring(0, 100));
+
+      // ═══════════════════════════════════════════════════════════════
+      // 📋 ÉTAPE 7: EXTRACTION DES TABLES DE LA RÉPONSE
+      // ═══════════════════════════════════════════════════════════════
+      console.log("");
+      console.log("📋 ÉTAPE 7: EXTRACTION DES TABLES DE LA RÉPONSE");
 
       const n8nTables = extractTablesFromResponse(output);
 
@@ -688,19 +983,59 @@
         throw new Error("Aucune table trouvée dans la réponse n8n");
       }
 
+      console.log(`✅ ${n8nTables.length} table(s) extraite(s) de la réponse`);
+
+      // ═══════════════════════════════════════════════════════════════
+      // 📋 ÉTAPE 8: INTÉGRATION DES TABLES DANS LE DOM
+      // ═══════════════════════════════════════════════════════════════
+      console.log("");
+      console.log("📋 ÉTAPE 8: INTÉGRATION DES TABLES DANS LE DOM");
+
       const targetContainer = findTargetContainer(triggerTable);
 
       if (!targetContainer) {
         throw new Error("Impossible de trouver le conteneur cible");
       }
 
+      console.log("✅ Conteneur cible trouvé");
       integrateTablesOnly(n8nTables, targetContainer, dynamicKeyword);
+
+      // ═══════════════════════════════════════════════════════════════
+      // 📋 ÉTAPE 9: SUPPRESSION DE LA TABLE DÉCLENCHEUSE
+      // ═══════════════════════════════════════════════════════════════
+      console.log("");
+      console.log("📋 ÉTAPE 9: SUPPRESSION DE LA TABLE DÉCLENCHEUSE");
       removeTriggerTable(triggerTable, dynamicKeyword);
 
-      console.log(`🎉 Traitement complet réussi pour "${dynamicKeyword}"`);
+      // ═══════════════════════════════════════════════════════════════
+      // ✅ SUCCÈS FINAL
+      // ═══════════════════════════════════════════════════════════════
+      console.log("");
+      console.log("╔═══════════════════════════════════════════════════════╗");
+      console.log(`║  🎉 SUCCÈS: Traitement terminé pour ${dynamicKeyword.substring(0, 20).padEnd(20)}║`);
+      console.log("╚═══════════════════════════════════════════════════════╝");
+      console.log("");
+      console.log("📊 RÉSUMÉ DU TRAITEMENT:");
+      console.log(`├─ Mot-clé: "${dynamicKeyword}"`);
+      console.log(`├─ Tables envoyées: ${tableCount}`);
+      console.log(`├─ Tables reçues: ${n8nTables.length}`);
+      console.log(`├─ Taille HTML envoyé: ${htmlSize} caractères`);
+      console.log(`├─ Taille réponse: ${output.length} caractères`);
+      console.log("└─ Statut: ✅ SUCCÈS");
+      console.log("");
 
     } catch (error) {
-      console.error(`❌ Erreur lors du traitement pour le mot-clé dynamique:`, error);
+      console.log("");
+      console.log("╔═══════════════════════════════════════════════════════╗");
+      console.log("║  ❌ ÉCHEC: Erreur lors du traitement                  ║");
+      console.log("╚═══════════════════════════════════════════════════════╝");
+      console.error(`❌ Erreur pour le mot-clé "${dynamicKeyword}":`, error);
+      console.log("");
+      console.log("📊 DIAGNOSTIC DE L'ERREUR:");
+      console.log(`├─ Message: ${error.message}`);
+      console.log(`├─ Type: ${error.name}`);
+      console.log(`├─ Mot-clé concerné: "${dynamicKeyword}"`);
+      console.log("└─ Action: Vérifiez les logs ci-dessus pour plus de détails");
 
       const errorMessage = document.createElement("div");
       errorMessage.className = "my-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg";
@@ -780,12 +1115,12 @@
   });
 
   function initialize() {
-    console.log("🔧 Initialisation du script V17.1...");
+    console.log("🔧 Initialisation du script V18.0...");
 
     setTimeout(scanAndProcess, 800);
     observer.observe(document.body, { childList: true, subtree: true });
 
-    console.log("✅ Script V17.1 initialisé - Détection dynamique des mots-clés activée");
+    console.log("✅ Script V18.0 initialisé - Détection dynamique des mots-clés activée");
     console.log("🌐 Endpoint configuré:", CONFIG.N8N_ENDPOINT_URL);
   }
 
@@ -856,7 +1191,7 @@
   }
 
   // API publique pour debugging
-  window.ClaraverseN8nV17 = {
+  window.ClaraverseN8nV18 = {
     scanAndProcess,
     CONFIG,
     extractDynamicKeyword,
@@ -902,14 +1237,14 @@
         return { success: false, error: error.message };
       }
     },
-    version: "17.1.0 - Fix réponse n8n (Array/Object/data/output/tables)",
+    version: "18.0.0 - Logs détaillés + Fix réponse n8n (Array/Object/data/output/tables)",
   };
 
-  console.log("🎉 Flowise.js V17.1 chargé avec succès!");
+  console.log("🎉 Flowise.js V18.0 chargé avec succès!");
   console.log("💡 Commandes disponibles:");
-  console.log("   - window.ClaraverseN8nV17.testN8nConnection()");
-  console.log("   - window.ClaraverseN8nV17.getCacheInfo()");
-  console.log("   - window.ClaraverseN8nV17.clearAllCache()");
-  console.log("   - window.ClaraverseN8nV17.scanAndProcess()");
+  console.log("   - window.ClaraverseN8nV18.testN8nConnection()");
+  console.log("   - window.ClaraverseN8nV18.getCacheInfo()");
+  console.log("   - window.ClaraverseN8nV18.clearAllCache()");
+  console.log("   - window.ClaraverseN8nV18.scanAndProcess()");
 
 })();

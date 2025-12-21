@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Réponse Workflow htlm_processor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        h2 {
+            color: #666;
+            margin-top: 0;
+        }
+
+        .success {
+            color: #22c55e;
+        }
+
+        .error {
+            color: #ef4444;
+        }
+
+        .info {
+            color: #3b82f6;
+        }
+
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border-left: 4px solid #3b82f6;
+        }
+
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background: #f9fafb;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 Test Réponse Workflow htlm_processor</h1>
+
+    <div class="test-section">
+        <h2>📋 Description du Test</h2>
+        <p>Ce test vérifie que <code>flowise.js</code> peut correctement traiter les réponses du workflow n8n
+            <strong>htlm_processor</strong>.</p>
+        <p><strong>Format de réponse attendu:</strong></p>
+        <pre>[{
+  "output": "| Rubrique | Description |\\n...",
+  "status": "success",
+  "processing_stats": {...},
+  "table_format": "markdown_tables",
+  "timestamp": "2025-12-02T12:01:48.262Z"
+}]</pre>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Tests Disponibles</h2>
+        <button onclick="testFormat1()">Test Format Array avec Status</button>
+        <button onclick="testFormat2()">Test Format Objet Direct</button>
+        <button onclick="testFormat3()">Test Format Erreur</button>
+        <button onclick="testFormat4()">Test Format Ancien (Compatibilité)</button>
+        <button onclick="clearResults()">Effacer Résultats</button>
+    </div>
+
+    <div id="results" class="test-section" style="display: none;">
+        <h2>📊 Résultats du Test</h2>
+        <div id="result-content"></div>
+    </div>
+
+    <script>
+        // Copie de la fonction normalizeN8nResponse depuis flowise.js
+        function normalizeN8nResponse(response) {
+            console.log("🔍 Normalisation de la réponse n8n...");
+            console.log("📦 Type de réponse:", Array.isArray(response) ? "Array" : typeof response);
+
+            // Format 1: Array avec objet contenant 'output'
+            if (Array.isArray(response) && response.length > 0) {
+                const firstItem = response[0];
+
+                // Format avec 'data' (Programme de travail)
+                if (firstItem && typeof firstItem === 'object' && 'data' in firstItem) {
+                    console.log("✅ Format détecté: Programme de travail (data)");
+                    return {
+                        output: JSON.stringify(firstItem.data, null, 2),
+                        metadata: firstItem
+                    };
+                }
+
+                // ⭐ NOUVEAU: Format avec 'output' + 'status' + 'table_format' (Workflow htlm_processor)
+                if (firstItem && typeof firstItem === 'object' && 'output' in firstItem && 'status' in firstItem) {
+                    console.log("✅ Format détecté: Workflow htlm_processor (output + status + table_format)");
+                    console.log("📊 Status:", firstItem.status);
+                    console.log("📋 Table format:", firstItem.table_format);
+
+                    if (firstItem.status === 'success' && firstItem.output) {
+                        return {
+                            output: firstItem.output,
+                            metadata: {
+                                status: firstItem.status,
+                                table_format: firstItem.table_format,
+                                processing_stats: firstItem.processing_stats,
+                                timestamp: firstItem.timestamp
+                            }
+                        };
+                    } else if (firstItem.status === 'error') {
+                        console.error("❌ Erreur dans la réponse n8n:", firstItem);
+                        return {
+                            output: null,
+                            metadata: { error: "Erreur n8n", details: firstItem }
+                        };
+                    }
+                }
+
+                // Format avec 'output' standard (sans status)
+                if (firstItem && typeof firstItem === 'object' && 'output' in firstItem) {
+                    console.log("✅ Format détecté: Standard (output dans array)");
+                    return {
+                        output: firstItem.output,
+                        metadata: firstItem
+                    };
+                }
+            }
+
+            // Format 2: Objet direct avec 'output'
+            if (response && typeof response === 'object' && !Array.isArray(response)) {
+                if ('output' in response && 'status' in response) {
+                    console.log("✅ Format détecté: Workflow htlm_processor (objet direct)");
+                    if (response.status === 'success' && response.output) {
+                        return {
+                            output: response.output,
+                            metadata: {
+                                status: response.status,
+                                table_format: response.table_format,
+                                processing_stats: response.processing_stats,
+                                timestamp: response.timestamp
+                            }
+                        };
+                    }
+                }
+
+                if ('output' in response) {
+                    console.log("✅ Format détecté: Output direct");
+                    return {
+                        output: response.output,
+                        metadata: response
+                    };
+                }
+            }
+
+            console.error("❌ Format de réponse non reconnu:", response);
+            return {
+                output: null,
+                metadata: { error: "Format inconnu", rawResponse: response }
+            };
+        }
+
+        // Données de test
+        const testData = {
+            format1: [{
+                "output": "| Rubrique | Description |\n|-------------|-------------|\n| Etape | Rapport provisoire |\n| reference | Rapport_prov-001 |\n\n| No | Intitule | Observation |\n|-----|----------|-------------|\n| 1 | Test | Observation test |",
+                "status": "success",
+                "processing_stats": {
+                    "tables_processed": 3,
+                    "total_rows": 13,
+                    "data_structure_detected": "complex_object",
+                    "format": "markdown_tables"
+                },
+                "table_format": "markdown_tables",
+                "timestamp": "2025-12-02T12:01:48.262Z"
+            }],
+            format2: {
+                "output": "| Rubrique | Description |\n|-------------|-------------|\n| Etape | Synthèse |\n| Reference | Synth-001 |",
+                "status": "success",
+                "processing_stats": {
+                    "tables_processed": 1,
+                    "total_rows": 2
+                },
+                "table_format": "markdown_tables",
+                "timestamp": "2025-12-02T12:16:02.017Z"
+            },
+            format3: [{
+                "output": "",
+                "status": "error",
+                "error_details": {
+                    "message": "Aucune table trouvée",
+                    "code": "NO_TABLES"
+                },
+                "timestamp": "2025-12-02T12:20:00.000Z"
+            }],
+            format4: [{
+                "output": "| Col1 | Col2 |\n|------|------|\n| A | B |"
+            }]
+        };
+
+        function displayResult(testName, input, result) {
+            const resultsDiv = document.getElementById('results');
+            const contentDiv = document.getElementById('result-content');
+
+            resultsDiv.style.display = 'block';
+
+            const isSuccess = result.output !== null;
+            const statusClass = isSuccess ? 'success' : 'error';
+            const statusIcon = isSuccess ? '✅' : '❌';
+
+            const html = `
+                <div class="result-box">
+                    <h3 class="${statusClass}">${statusIcon} ${testName}</h3>
+                    
+                    <h4>📥 Entrée:</h4>
+                    <pre>${JSON.stringify(input, null, 2)}</pre>
+                    
+                    <h4>📤 Sortie Normalisée:</h4>
+                    <pre>${JSON.stringify(result, null, 2)}</pre>
+                    
+                    ${result.output ? `
+                        <h4>🎨 Rendu Markdown:</h4>
+                        <div style="background: white; padding: 15px; border: 1px solid #ddd; border-radius: 4px;">
+                            ${convertMarkdownToHTML(result.output)}
+                        </div>
+                    ` : ''}
+                    
+                    <h4>📊 Métadonnées:</h4>
+                    <ul>
+                        ${result.metadata.status ? `<li><strong>Status:</strong> ${result.metadata.status}</li>` : ''}
+                        ${result.metadata.table_format ? `<li><strong>Format:</strong> ${result.metadata.table_format}</li>` : ''}
+                        ${result.metadata.processing_stats ? `<li><strong>Tables traitées:</strong> ${result.metadata.processing_stats.tables_processed}</li>` : ''}
+                        ${result.metadata.timestamp ? `<li><strong>Timestamp:</strong> ${result.metadata.timestamp}</li>` : ''}
+                        ${result.metadata.error ? `<li class="error"><strong>Erreur:</strong> ${result.metadata.error}</li>` : ''}
+                    </ul>
+                </div>
+            `;
+
+            contentDiv.innerHTML = html;
+        }
+
+        function convertMarkdownToHTML(markdown) {
+            // Conversion simple de markdown en HTML pour l'affichage
+            const lines = markdown.split('\n');
+            let html = '';
+            let inTable = false;
+            let tableHTML = '';
+
+            lines.forEach((line, index) => {
+                if (line.trim().startsWith('|')) {
+                    if (!inTable) {
+                        inTable = true;
+                        tableHTML = '<table>';
+                    }
+
+                    const cells = line.split('|').filter(cell => cell.trim() !== '');
+
+                    // Ligne de séparation
+                    if (cells.every(cell => /^[\s:-]+$/.test(cell))) {
+                        return;
+                    }
+
+                    // Première ligne = en-têtes
+                    if (index === 0 || tableHTML === '<table>') {
+                        tableHTML += '<thead><tr>';
+                        cells.forEach(cell => {
+                            tableHTML += `<th>${cell.trim()}</th>`;
+                        });
+                        tableHTML += '</tr></thead><tbody>';
+                    } else {
+                        tableHTML += '<tr>';
+                        cells.forEach(cell => {
+                            tableHTML += `<td>${cell.trim()}</td>`;
+                        });
+                        tableHTML += '</tr>';
+                    }
+                } else if (inTable && line.trim() === '') {
+                    tableHTML += '</tbody></table>';
+                    html += tableHTML;
+                    tableHTML = '';
+                    inTable = false;
+                }
+            });
+
+            if (inTable) {
+                tableHTML += '</tbody></table>';
+                html += tableHTML;
+            }
+
+            return html || '<p>Aucun contenu à afficher</p>';
+        }
+
+        function testFormat1() {
+            console.log("🧪 Test Format 1: Array avec status");
+            const result = normalizeN8nResponse(testData.format1);
+            displayResult("Format Array avec Status (htlm_processor)", testData.format1, result);
+        }
+
+        function testFormat2() {
+            console.log("🧪 Test Format 2: Objet direct");
+            const result = normalizeN8nResponse(testData.format2);
+            displayResult("Format Objet Direct avec Status", testData.format2, result);
+        }
+
+        function testFormat3() {
+            console.log("🧪 Test Format 3: Erreur");
+            const result = normalizeN8nResponse(testData.format3);
+            displayResult("Format Erreur", testData.format3, result);
+        }
+
+        function testFormat4() {
+            console.log("🧪 Test Format 4: Ancien format (compatibilité)");
+            const result = normalizeN8nResponse(testData.format4);
+            displayResult("Format Ancien (Compatibilité)", testData.format4, result);
+        }
+
+        function clearResults() {
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('result-content').innerHTML = '';
+        }
+
+        // Test automatique au chargement
+        window.addEventListener('load', () => {
+            console.log("✅ Page de test chargée");
+            console.log("💡 Cliquez sur un bouton pour lancer un test");
+        });
+    </script>
+</body>
+
+</html>

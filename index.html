@@ -37,8 +37,7 @@
   <script src="/wrap-tables-auto.js"></script>
 
   <!-- Fix pour charger Mammoth.js sans conflit AMD/RequireJS -->
-
-  <!-- Version 2: Génère un document séparé pour chaque table Flowise -->
+  <script src="/mammoth-loader-fix.js"></script>
 
 
   <!-- Version 1 (désactivée) -->
@@ -46,6 +45,7 @@
 
   <!-- Diagnostic Modelisation (décommenter pour debug) -->
   <!-- <script src="/diagnostic-modelisation.js"></script> -->
+
   <script src="/Flowise.js"></script>
 
   <!-- LocalStorage Cleanup Manager - DOIT être chargé EN PREMIER -->
@@ -58,24 +58,17 @@
   <script src="/menu.js"></script>
   <script src="/conso.js"></script>
 
-  <!-- Restauration complète des tables CIA depuis localStorage -->
-  <!-- DÉSACTIVÉ: Crée des doublons et fait disparaître les tables originales -->
-  <!-- <script src="/restaurer-tables-cia-complet.js"></script> -->
+  <!-- Menu Dossier - Barre latérale accordéon pour les tables -->
+  <script src="/dossier-menu.js"></script>
 
-  <!-- Force la restauration des checkboxes CIA avec délai -->
-  <script src="/force-restauration-cia-delai.js"></script>
-
-  <!-- Force CIA Checkboxes pour tables générées dynamiquement -->
-  <script src="/cia-checkbox-force.js"></script>
-
-
-
+  <!-- Script Examen CIA - Questionnaires avec persistance -->
+  <script src="/examen_cia.js"></script>
 
   <!-- Script Auto-Fix Examen CIA - Force fusion et restauration -->
+  <script src="/examen-cia-auto-fix.js"></script>
 
-
-  <!-- Combine: masquage sélecteurs LLM + espacement ultra-compact -->
-  <script src="/design_chat.js"></script>
+  <!-- Script de modélisation ULTRA COMPACT - Réduction 75% -->
+  <script src="/modelisation-ultra-compact.js"></script>
 
   <!-- Diagnostic espacement (console: diagnosticEspacement()) -->
   <script src="/diagnostic-espacement.js"></script>

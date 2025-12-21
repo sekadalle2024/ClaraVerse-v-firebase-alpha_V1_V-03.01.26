@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Fix htlm_processor - Flowise.js V17.1</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+
+        .test-section {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+
+        .button:hover {
+            background: #2980b9;
+        }
+
+        .button.success {
+            background: #27ae60;
+        }
+
+        .button.success:hover {
+            background: #229954;
+        }
+
+        .button.danger {
+            background: #e74c3c;
+        }
+
+        .button.danger:hover {
+            background: #c0392b;
+        }
+
+        .result {
+            background: #fff;
+            border: 2px solid #3498db;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .result.success {
+            border-color: #27ae60;
+            background: #d5f4e6;
+        }
+
+        .result.error {
+            border-color: #e74c3c;
+            background: #fadbd8;
+        }
+
+        .info-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #3498db;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background: #f2f2f2;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .status-badge.success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .status-badge.error {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .status-badge.pending {
+            background: #f39c12;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧪 Test Fix htlm_processor - Flowise.js V17.1</h1>
+
+        <div class="info-box">
+            <strong>📋 Objectif:</strong> Vérifier que Flowise.js peut maintenant traiter correctement les réponses du
+            workflow n8n <code>htlm_processor</code>
+            <br><br>
+            <strong>🎯 Format de réponse attendu:</strong>
+            <pre style="margin: 10px 0; padding: 10px; background: white; border-radius: 3px;">[{
+  "output": "| Telecharger |\\n|-------------|\\n| https://... |",
+  "tables": [...],
+  "status": "success",
+  "tables_found": 1,
+  "rows_processed": 1,
+  "timestamp": "2025-12-05T16:11:34.059Z"
+}]</pre>
+        </div>
+
+        <h2>📊 Test 1: Normalisation de la réponse htlm_processor</h2>
+        <div class="test-section">
+            <p>Ce test simule la réponse exacte de votre workflow n8n htlm_processor</p>
+            <button class="button" onclick="testHtmlProcessorFormat()">▶️ Tester Format htlm_processor</button>
+            <div id="test1-result"></div>
+        </div>
+
+        <h2>🔄 Test 2: Comparaison avec format conforme</h2>
+        <div class="test-section">
+            <p>Compare le nouveau format avec le format déjà supporté (Synthèse)</p>
+            <button class="button" onclick="testFormatComparison()">▶️ Comparer les formats</button>
+            <div id="test2-result"></div>
+        </div>
+
+        <h2>🌐 Test 3: Appel réel à l'endpoint n8n</h2>
+        <div class="test-section">
+            <p>Teste la connexion réelle avec votre endpoint n8n</p>
+            <div class="info-box">
+                <strong>⚠️ Prérequis:</strong> Votre workflow n8n doit être actif sur:<br>
+                <code>https://xomava4845.app.n8n.cloud/webhook/htlm_processor</code>
+            </div>
+            <button class="button success" onclick="testRealN8nCall()">🚀 Appel Réel n8n</button>
+            <div id="test3-result"></div>
+        </div>
+
+        <h2>📋 Test 4: Extraction et affichage des tables</h2>
+        <div class="test-section">
+            <p>Vérifie que les tables markdown sont correctement extraites et affichées</p>
+            <button class="button" onclick="testTableExtraction()">▶️ Tester Extraction Tables</button>
+            <div id="test4-result"></div>
+        </div>
+
+        <h2>🔍 Console de Debug</h2>
+        <div class="test-section">
+            <p>Ouvrez la console du navigateur (F12) pour voir les logs détaillés</p>
+            <button class="button" onclick="window.ClaraverseN8nV17.enableHTMLLog()">✅ Activer Log HTML</button>
+            <button class="button danger" onclick="window.ClaraverseN8nV17.disableHTMLLog()">❌ Désactiver Log
+                HTML</button>
+            <button class="button" onclick="showCacheInfo()">📦 Info Cache</button>
+            <button class="button danger" onclick="clearCache()">🗑️ Vider Cache</button>
+        </div>
+    </div>
+
+    <script>
+        // Données de test simulant la réponse htlm_processor
+        const mockHtmlProcessorResponse = [{
+            "output": "| Telecharger |\n|-------------|\n| https://docs.google.com/document/d/1Pd5A6vUkLhr072G6Vj8t-mMGnB8QhRVKLsJNpzxDj3U/edit?usp=sharing |",
+            "tables": [
+                {
+                    "name": "table 1",
+                    "type": "array",
+                    "markdown": "| Telecharger |\n|-------------|\n| https://docs.google.com/document/d/1Pd5A6vUkLhr072G6Vj8t-mMGnB8QhRVKLsJNpzxDj3U/edit?usp=sharing |",
+                    "data": [
+                        {
+                            "Telecharger": "https://docs.google.com/document/d/1Pd5A6vUkLhr072G6Vj8t-mMGnB8QhRVKLsJNpzxDj3U/edit?usp=sharing"
+                        }
+                    ]
+                }
+            ],
+            "status": "success",
+            "tables_found": 1,
+            "rows_processed": 1,
+            "timestamp": "2025-12-05T16:11:34.059Z"
+        }];
+
+        // Données de test format conforme (Synthèse)
+        const mockConformeResponse = [{
+            "output": "| Rubrique | Description |\n|-------------|-------------|\n| Etape | Synthèse |\n| Reference | Synth-001 |\n\n\n| No | Constat | Intitule |\n|-----|---------|----------|\n| 1 | Test | Test |",
+            "status": "success",
+            "processing_stats": {
+                "tables_processed": 3,
+                "total_rows": 4,
+                "data_structure_detected": "complex_object",
+                "format": "markdown_tables"
+            },
+            "table_format": "markdown_tables",
+            "timestamp": "2025-12-02T12:16:02.017Z"
+        }];
+
+        function testHtmlProcessorFormat() {
+            console.log("🧪 TEST 1: Normalisation format htlm_processor");
+            const resultDiv = document.getElementById('test1-result');
+
+            try {
+                // Appel de la fonction de normalisation
+                const normalized = window.ClaraverseN8nV17.normalizeN8nResponse(mockHtmlProcessorResponse);
+
+                console.log("✅ Normalisation réussie:", normalized);
+
+                // Vérifications
+                const checks = {
+                    "Output existe": !!normalized.output,
+                    "Output non vide": normalized.output && normalized.output.length > 0,
+                    "Metadata existe": !!normalized.metadata,
+                    "Status = success": normalized.metadata?.status === 'success',
+                    "Tables_found présent": 'tables_found' in (normalized.metadata || {}),
+                    "Timestamp présent": !!normalized.metadata?.timestamp
+                };
+
+                let html = '<div class="result success">';
+                html += '<h3>✅ Test Réussi!</h3>';
+                html += '<h4>📊 Résultat de la normalisation:</h4>';
+                html += '<pre>' + JSON.stringify(normalized, null, 2) + '</pre>';
+                html += '<h4>✔️ Vérifications:</h4>';
+                html += '<table>';
+                html += '<tr><th>Vérification</th><th>Résultat</th></tr>';
+
+                for (const [check, result] of Object.entries(checks)) {
+                    const badge = result ?
+                        '<span class="status-badge success">✅ OK</span>' :
+                        '<span class="status-badge error">❌ FAIL</span>';
+                    html += `<tr><td>${check}</td><td>${badge}</td></tr>`;
+                }
+
+                html += '</table>';
+                html += '</div>';
+
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error("❌ Erreur test 1:", error);
+                resultDiv.innerHTML = `<div class="result error">
+                    <h3>❌ Erreur</h3>
+                    <p>${error.message}</p>
+                    <pre>${error.stack}</pre>
+                </div>`;
+            }
+        }
+
+        function testFormatComparison() {
+            console.log("🧪 TEST 2: Comparaison des formats");
+            const resultDiv = document.getElementById('test2-result');
+
+            try {
+                const normalizedHtmlProcessor = window.ClaraverseN8nV17.normalizeN8nResponse(mockHtmlProcessorResponse);
+                const normalizedConforme = window.ClaraverseN8nV17.normalizeN8nResponse(mockConformeResponse);
+
+                let html = '<div class="result success">';
+                html += '<h3>📊 Comparaison des formats</h3>';
+
+                html += '<h4>Format htlm_processor:</h4>';
+                html += '<table>';
+                html += '<tr><th>Propriété</th><th>Valeur</th></tr>';
+                html += `<tr><td>Output length</td><td>${normalizedHtmlProcessor.output?.length || 0} caractères</td></tr>`;
+                html += `<tr><td>Status</td><td><span class="status-badge success">${normalizedHtmlProcessor.metadata?.status}</span></td></tr>`;
+                html += `<tr><td>Tables found</td><td>${normalizedHtmlProcessor.metadata?.tables_found}</td></tr>`;
+                html += `<tr><td>Rows processed</td><td>${normalizedHtmlProcessor.metadata?.rows_processed}</td></tr>`;
+                html += '</table>';
+
+                html += '<h4>Format conforme (Synthèse):</h4>';
+                html += '<table>';
+                html += '<tr><th>Propriété</th><th>Valeur</th></tr>';
+                html += `<tr><td>Output length</td><td>${normalizedConforme.output?.length || 0} caractères</td></tr>`;
+                html += `<tr><td>Status</td><td><span class="status-badge success">${normalizedConforme.metadata?.status}</span></td></tr>`;
+                html += `<tr><td>Table format</td><td>${normalizedConforme.metadata?.table_format}</td></tr>`;
+                html += `<tr><td>Tables processed</td><td>${normalizedConforme.metadata?.processing_stats?.tables_processed}</td></tr>`;
+                html += '</table>';
+
+                html += '<h4>✅ Conclusion:</h4>';
+                html += '<p>Les deux formats sont maintenant correctement normalisés et retournent un objet avec <code>output</code> et <code>metadata</code>.</p>';
+                html += '</div>';
+
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error("❌ Erreur test 2:", error);
+                resultDiv.innerHTML = `<div class="result error">
+                    <h3>❌ Erreur</h3>
+                    <p>${error.message}</p>
+                </div>`;
+            }
+        }
+
+        async function testRealN8nCall() {
+            console.log("🧪 TEST 3: Appel réel n8n");
+            const resultDiv = document.getElementById('test3-result');
+
+            resultDiv.innerHTML = '<div class="result"><span class="status-badge pending">⏳ En cours...</span> Appel à l\'endpoint n8n...</div>';
+
+            try {
+                const testPayload = {
+                    question: `<table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <thead>
+                            <tr>
+                                <th>Rubrique</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Etape</td>
+                                <td>Programme de travail</td>
+                            </tr>
+                            <tr>
+                                <td>Processus</td>
+                                <td>facturation des ventes</td>
+                            </tr>
+                        </tbody>
+                    </table>`
+                };
+
+                console.log("📡 Envoi vers:", "https://xomava4845.app.n8n.cloud/webhook/htlm_processor");
+                console.log("📦 Payload:", testPayload);
+
+                const response = await fetch("https://xomava4845.app.n8n.cloud/webhook/htlm_processor", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+                    body: JSON.stringify(testPayload)
+                });
+
+                console.log("📥 Réponse HTTP:", response.status, response.statusText);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log("📦 Données reçues:", data);
+
+                // Normaliser la réponse
+                const normalized = window.ClaraverseN8nV17.normalizeN8nResponse(data);
+                console.log("🔄 Données normalisées:", normalized);
+
+                let html = '<div class="result success">';
+                html += '<h3>✅ Appel Réussi!</h3>';
+                html += '<h4>📡 Réponse brute:</h4>';
+                html += '<pre>' + JSON.stringify(data, null, 2).substring(0, 1000) + '...</pre>';
+                html += '<h4>🔄 Réponse normalisée:</h4>';
+                html += '<pre>' + JSON.stringify(normalized, null, 2) + '</pre>';
+                html += '<h4>📊 Statistiques:</h4>';
+                html += '<table>';
+                html += `<tr><td>Status</td><td><span class="status-badge success">${normalized.metadata?.status}</span></td></tr>`;
+                html += `<tr><td>Output length</td><td>${normalized.output?.length || 0} caractères</td></tr>`;
+                html += `<tr><td>Tables found</td><td>${normalized.metadata?.tables_found || 'N/A'}</td></tr>`;
+                html += `<tr><td>Timestamp</td><td>${normalized.metadata?.timestamp || 'N/A'}</td></tr>`;
+                html += '</table>';
+                html += '</div>';
+
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error("❌ Erreur test 3:", error);
+                resultDiv.innerHTML = `<div class="result error">
+                    <h3>❌ Erreur</h3>
+                    <p>${error.message}</p>
+                    <pre>${error.stack}</pre>
+                    <p><strong>💡 Vérifiez:</strong></p>
+                    <ul>
+                        <li>Que votre workflow n8n est actif</li>
+                        <li>Que l'URL de l'endpoint est correcte</li>
+                        <li>Que vous n'avez pas de problème CORS</li>
+                    </ul>
+                </div>`;
+            }
+        }
+
+        function testTableExtraction() {
+            console.log("🧪 TEST 4: Extraction des tables");
+            const resultDiv = document.getElementById('test4-result');
+
+            try {
+                const normalized = window.ClaraverseN8nV17.normalizeN8nResponse(mockHtmlProcessorResponse);
+                const tables = window.ClaraverseN8nV17.extractTablesFromResponse(normalized.output);
+
+                console.log("📋 Tables extraites:", tables);
+
+                let html = '<div class="result success">';
+                html += '<h3>✅ Extraction Réussie!</h3>';
+                html += `<p><strong>Nombre de tables extraites:</strong> ${tables.length}</p>`;
+
+                if (tables.length > 0) {
+                    html += '<h4>📊 Aperçu des tables:</h4>';
+                    tables.forEach((table, index) => {
+                        html += `<h5>Table ${index + 1}:</h5>`;
+                        html += table.outerHTML;
+                    });
+                } else {
+                    html += '<p class="status-badge error">⚠️ Aucune table extraite</p>';
+                }
+
+                html += '</div>';
+
+                resultDiv.innerHTML = html;
+
+            } catch (error) {
+                console.error("❌ Erreur test 4:", error);
+                resultDiv.innerHTML = `<div class="result error">
+                    <h3>❌ Erreur</h3>
+                    <p>${error.message}</p>
+                </div>`;
+            }
+        }
+
+        function showCacheInfo() {
+            const info = window.ClaraverseN8nV17.getCacheInfo();
+            alert(`📦 Informations du cache:\n\nNombre d'entrées: ${Object.keys(info).length}\nTaille: ${JSON.stringify(info).length} caractères\n\nVoir la console pour plus de détails`);
+        }
+
+        function clearCache() {
+            if (confirm('🗑️ Êtes-vous sûr de vouloir vider le cache?')) {
+                window.ClaraverseN8nV17.clearAllCache();
+                alert('✅ Cache vidé avec succès!');
+            }
+        }
+
+        // Auto-test au chargement
+        window.addEventListener('load', () => {
+            console.log("🎉 Page de test chargée");
+            console.log("💡 Flowise.js version:", window.ClaraverseN8nV17?.version);
+
+            if (!window.ClaraverseN8nV17) {
+                alert("❌ ERREUR: Flowise.js n'est pas chargé!\n\nAssurez-vous que le fichier Flowise.js est bien inclus dans votre application.");
+            } else {
+                console.log("✅ Flowise.js détecté et prêt");
+            }
+        });
+    </script>
+</body>
+
+</html>

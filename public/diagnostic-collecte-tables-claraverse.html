@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnostic Collecte Tables Claraverse</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #dc2626;
+            border-bottom: 3px solid #dc2626;
+            padding-bottom: 10px;
+        }
+
+        .alert {
+            background: #fef2f2;
+            border-left: 4px solid #dc2626;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .alert h3 {
+            margin-top: 0;
+            color: #dc2626;
+        }
+
+        button {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 10px 10px 0;
+        }
+
+        button:hover {
+            background: #b91c1c;
+        }
+
+        .log-container {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 600px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid transparent;
+        }
+
+        .log-entry.success {
+            border-left-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .log-entry.error {
+            border-left-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .log-entry.warning {
+            border-left-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .log-entry.info {
+            border-left-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 2px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #dc2626;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #64748b;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔍 Diagnostic Collecte Tables Claraverse</h1>
+
+        <div class="alert">
+            <h3>⚠️ Problème Identifié</h3>
+            <p><strong>Symptôme :</strong> HTTP REQUEST fonctionne, mais Claraverse → n8n envoie des données vides</p>
+            <p><strong>Hypothèse :</strong> Les tables ne sont pas collectées correctement dans Claraverse avant l'envoi
+            </p>
+            <p><strong>Objectif :</strong> Diagnostiquer la fonction collectCriteriaTables() et identifier pourquoi elle
+                ne collecte rien</p>
+        </div>
+
+        <h2>📋 Instructions</h2>
+        <ol>
+            <li>Ouvrir cette page dans Claraverse (après avoir créé des tables)</li>
+            <li>Cliquer sur "Analyser le DOM"</li>
+            <li>Vérifier les logs pour comprendre pourquoi les tables ne sont pas collectées</li>
+        </ol>
+
+        <button onclick="analyzeDom()">🔍 Analyser le DOM</button>
+        <button onclick="testCollectFunction()">🧪 Tester collectCriteriaTables()</button>
+        <button onclick="clearLogs()">🗑️ Effacer les logs</button>
+
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-divs">0</div>
+                <div class="stat-label">Divs Prose</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-tables">0</div>
+                <div class="stat-label">Tables Totales</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-with-headers">0</div>
+                <div class="stat-label">Avec En-têtes Requis</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-matching">0</div>
+                <div class="stat-label">Correspondantes</div>
+            </div>
+        </div>
+
+        <div class="log-container" id="logs"></div>
+    </div>
+
+    <script>
+        const SELECTORS = {
+            CHAT_TABLES: "table.min-w-full.border.border-gray-200.dark\\:border-gray-700.rounded-lg",
+            PARENT_DIV: "div.prose.prose-base.dark\\:prose-invert.max-w-none"
+        };
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(entry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}]`, message);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+            log('Logs effacés', 'info');
+        }
+
+        function updateStats(divs, tables, withHeaders, matching) {
+            document.getElementById('stat-divs').textContent = divs;
+            document.getElementById('stat-tables').textContent = tables;
+            document.getElementById('stat-with-headers').textContent = withHeaders;
+            document.getElementById('stat-matching').textContent = matching;
+        }
+
+        function analyzeDom() {
+            log('═══════════════════════════════════════', 'info');
+            log('🔍 ANALYSE DU DOM CLARAVERSE', 'info');
+            log('═══════════════════════════════════════', 'info');
+
+            // 1. Compter les divs prose
+            const allDivs = document.querySelectorAll(SELECTORS.PARENT_DIV);
+            log(`📊 Nombre de divs "prose" trouvées: ${allDivs.length}`, allDivs.length > 0 ? 'success' : 'error');
+
+            if (allDivs.length === 0) {
+                log('❌ PROBLÈME: Aucune div "prose" trouvée !', 'error');
+                log('💡 Vérifiez que vous êtes bien dans Claraverse avec des messages affichés', 'warning');
+                updateStats(0, 0, 0, 0);
+                return;
+            }
+
+            // 2. Analyser chaque div
+            let totalTables = 0;
+            let divsWithTables = 0;
+            let divsWithRequiredHeaders = 0;
+            let divsMatching = 0;
+
+            allDivs.forEach((div, index) => {
+                log(`\n📋 Analyse de la div ${index + 1}/${allDivs.length}`, 'info');
+
+                // Chercher les tables dans cette div
+                const tables = div.querySelectorAll(SELECTORS.CHAT_TABLES);
+                log(`   └─ Tables trouvées: ${tables.length}`, tables.length > 0 ? 'success' : 'warning');
+
+                if (tables.length === 0) {
+                    log('   └─ ⏭️ Div ignorée (pas de table)', 'warning');
+                    return;
+                }
+
+                totalTables += tables.length;
+                divsWithTables++;
+
+                // Analyser la première table
+                const firstTable = tables[0];
+                const headers = Array.from(firstTable.querySelectorAll("th")).map(th => th.textContent.trim());
+                log(`   └─ En-têtes de la première table: [${headers.join(', ')}]`, 'info');
+
+                // Vérifier les en-têtes requis
+                const hasRubrique = headers.some(h => h.toLowerCase() === 'rubrique');
+                const hasDescription = headers.some(h => h.toLowerCase() === 'description');
+                const hasRequiredHeaders = hasRubrique && hasDescription;
+
+                log(`   └─ A "Rubrique": ${hasRubrique ? '✅' : '❌'}`, hasRubrique ? 'success' : 'error');
+                log(`   └─ A "Description": ${hasDescription ? '✅' : '❌'}`, hasDescription ? 'success' : 'error');
+
+                if (!hasRequiredHeaders) {
+                    log('   └─ ⏭️ Div ignorée (pas d\'en-têtes requis)', 'warning');
+                    return;
+                }
+
+                divsWithRequiredHeaders++;
+
+                // Analyser le contenu des cellules
+                const cells = firstTable.querySelectorAll("td");
+                const cellTexts = Array.from(cells).map(cell => cell.textContent.trim());
+                log(`   └─ Contenu des cellules: [${cellTexts.slice(0, 5).join(', ')}${cellTexts.length > 5 ? '...' : ''}]`, 'info');
+
+                // Chercher des mots-clés
+                const keywords = ['CIA', 'Flowise', 'Programme', 'Etape'];
+                const foundKeywords = keywords.filter(kw =>
+                    cellTexts.some(text => text.toLowerCase().includes(kw.toLowerCase()))
+                );
+
+                if (foundKeywords.length > 0) {
+                    log(`   └─ ✅ Mots-clés trouvés: [${foundKeywords.join(', ')}]`, 'success');
+                    divsMatching++;
+                } else {
+                    log(`   └─ ⚠️ Aucun mot-clé trouvé dans les cellules`, 'warning');
+                }
+            });
+
+            // 3. Résumé
+            log('\n═══════════════════════════════════════', 'info');
+            log('📊 RÉSUMÉ DE L\'ANALYSE', 'info');
+            log('═══════════════════════════════════════', 'info');
+            log(`Divs "prose" totales: ${allDivs.length}`, 'info');
+            log(`Divs avec tables: ${divsWithTables}`, divsWithTables > 0 ? 'success' : 'error');
+            log(`Divs avec en-têtes requis: ${divsWithRequiredHeaders}`, divsWithRequiredHeaders > 0 ? 'success' : 'error');
+            log(`Divs correspondantes (avec mots-clés): ${divsMatching}`, divsMatching > 0 ? 'success' : 'error');
+            log(`Tables totales: ${totalTables}`, 'info');
+
+            updateStats(allDivs.length, totalTables, divsWithRequiredHeaders, divsMatching);
+
+            // 4. Diagnostic
+            log('\n═══════════════════════════════════════', 'info');
+            log('🔍 DIAGNOSTIC', 'info');
+            log('═══════════════════════════════════════', 'info');
+
+            if (allDivs.length === 0) {
+                log('❌ PROBLÈME CRITIQUE: Aucune div "prose" trouvée', 'error');
+                log('💡 Solution: Vérifiez que vous êtes dans Claraverse avec des messages', 'warning');
+            } else if (divsWithTables === 0) {
+                log('❌ PROBLÈME: Aucune table trouvée dans les divs', 'error');
+                log('💡 Solution: Créez des tables dans le chat', 'warning');
+            } else if (divsWithRequiredHeaders === 0) {
+                log('❌ PROBLÈME: Aucune table avec en-têtes "Rubrique" et "Description"', 'error');
+                log('💡 Solution: Vos tables doivent avoir ces en-têtes pour être collectées', 'warning');
+            } else if (divsMatching === 0) {
+                log('❌ PROBLÈME: Aucune table avec mots-clés trouvée', 'error');
+                log('💡 Solution: Vos tables doivent contenir des mots-clés comme "CIA", "Flowise", etc.', 'warning');
+            } else {
+                log(`✅ ${divsMatching} div(s) devraient être collectées`, 'success');
+                log('💡 Si les données ne sont pas envoyées à n8n, le problème est ailleurs', 'info');
+            }
+        }
+
+        function testCollectFunction() {
+            log('═══════════════════════════════════════', 'info');
+            log('🧪 TEST DE collectCriteriaTables()', 'info');
+            log('═══════════════════════════════════════', 'info');
+
+            const dynamicKeyword = "CIA"; // Mot-clé de test
+            log(`🎯 Mot-clé de test: "${dynamicKeyword}"`, 'info');
+
+            // Simuler la fonction collectCriteriaTables
+            const allDivs = document.querySelectorAll(SELECTORS.PARENT_DIV);
+            const collectedTablesHTML = [];
+            const keywordVariations = [dynamicKeyword, dynamicKeyword.toLowerCase(), dynamicKeyword.toUpperCase()];
+
+            log(`🔄 Variations du mot-clé: [${keywordVariations.join(', ')}]`, 'info');
+            log(`📊 Analyse de ${allDivs.length} divs...`, 'info');
+
+            let divsAnalyzed = 0;
+            let divsWithTables = 0;
+            let divsWithRequiredHeaders = 0;
+            let divsMatching = 0;
+
+            allDivs.forEach((div, divIndex) => {
+                divsAnalyzed++;
+
+                const firstTable = div.querySelector(SELECTORS.CHAT_TABLES);
+                if (!firstTable) {
+                    return;
+                }
+
+                divsWithTables++;
+
+                const headers = Array.from(firstTable.querySelectorAll("th")).map(th => th.textContent.trim().toLowerCase());
+                const hasRequiredHeaders = headers.includes("rubrique") && headers.includes("description");
+
+                if (!hasRequiredHeaders) {
+                    return;
+                }
+
+                divsWithRequiredHeaders++;
+
+                const cellsOfFirstTable = firstTable.querySelectorAll("td");
+                const keywordFound = Array.from(cellsOfFirstTable).some(cell => {
+                    const cellText = cell.textContent.trim();
+                    return keywordVariations.some(variation =>
+                        cellText.toLowerCase().includes(variation.toLowerCase())
+                    );
+                });
+
+                if (keywordFound) {
+                    divsMatching++;
+                    log(`✅ Div ${divIndex + 1}: Correspondance trouvée`, 'success');
+                    const allTablesInDiv = div.querySelectorAll(SELECTORS.CHAT_TABLES);
+                    log(`   └─ ${allTablesInDiv.length} table(s) collectée(s)`, 'success');
+                    allTablesInDiv.forEach(table => {
+                        collectedTablesHTML.push(table.outerHTML);
+                    });
+                }
+            });
+
+            log('\n═══════════════════════════════════════', 'info');
+            log('📊 RÉSULTAT DU TEST', 'info');
+            log('═══════════════════════════════════════', 'info');
+            log(`Divs analysées: ${divsAnalyzed}`, 'info');
+            log(`Divs avec tables: ${divsWithTables}`, 'info');
+            log(`Divs avec en-têtes requis: ${divsWithRequiredHeaders}`, 'info');
+            log(`Divs correspondantes: ${divsMatching}`, divsMatching > 0 ? 'success' : 'error');
+            log(`Tables collectées: ${collectedTablesHTML.length}`, collectedTablesHTML.length > 0 ? 'success' : 'error');
+
+            if (collectedTablesHTML.length > 0) {
+                const finalHTML = collectedTablesHTML.join("\n");
+                log(`\n📏 Taille du HTML collecté: ${finalHTML.length} caractères`, 'success');
+                log(`\n📋 Aperçu du HTML (500 premiers caractères):`, 'info');
+                log(finalHTML.substring(0, 500) + '...', 'info');
+            } else {
+                log('\n❌ PROBLÈME: Aucune table collectée !', 'error');
+                log('💡 Vérifiez que vos tables contiennent le mot-clé "CIA"', 'warning');
+            }
+
+            updateStats(divsAnalyzed, divsWithTables, divsWithRequiredHeaders, divsMatching);
+        }
+
+        // Log initial
+        log('🎯 Page de diagnostic chargée', 'success');
+        log('💡 Cliquez sur "Analyser le DOM" pour commencer', 'info');
+    </script>
+</body>
+
+</html>

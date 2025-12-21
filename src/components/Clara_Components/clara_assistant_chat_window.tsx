@@ -605,7 +605,7 @@ const ProcessingIndicator: React.FC<{
       case 'processing':
         return {
           icon: <Loader2 className="w-5 h-5 animate-spin" />,
-          text: message || 'E-audit is thinking...',
+          text: message || 'Automatisation E-audit',
           bgColor: 'bg-blue-500'
         };
       case 'success':

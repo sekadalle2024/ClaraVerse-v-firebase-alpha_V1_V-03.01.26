@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Test Direct N8N</title>
+</head>
+
+<body>
+    <h1>Test Direct Endpoint N8N</h1>
+    <button onclick="testDirect()">Tester N8N</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testDirect() {
+            const result = document.getElementById('result');
+            result.textContent = '🔄 Test en cours...\n';
+
+            try {
+                const response = await fetch('https://xomava4845.app.n8n.cloud/webhook/htlm_processor', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        question: '<table><tr><th>Test</th></tr><tr><td>Connexion</td></tr></table>'
+                    })
+                });
+
+                result.textContent += `📊 Status: ${response.status}\n`;
+                result.textContent += `📋 Headers:\n`;
+                for (let [key, value] of response.headers.entries()) {
+                    result.textContent += `  ${key}: ${value}\n`;
+                }
+
+                const text = await response.text();
+                result.textContent += `\n📦 Body (${text.length} caractères):\n${text}\n`;
+
+                if (text) {
+                    try {
+                        const json = JSON.parse(text);
+                        result.textContent += `\n✅ JSON valide:\n${JSON.stringify(json, null, 2)}`;
+                    } catch (e) {
+                        result.textContent += `\n❌ Pas du JSON: ${e.message}`;
+                    }
+                } else {
+                    result.textContent += '\n❌ REPONSE VIDE - Le workflow n8n ne retourne rien!';
+                }
+
+            } catch (error) {
+                result.textContent += `\n❌ Erreur: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+
+</html>

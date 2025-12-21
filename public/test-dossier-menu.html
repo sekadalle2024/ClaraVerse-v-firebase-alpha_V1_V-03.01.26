@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Menu Dossier - E-audit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .test-controls {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .sidebar-mock {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 80px;
+            height: 100vh;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            gap: 20px;
+            z-index: 1000;
+        }
+
+        .sidebar-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-icon:hover {
+            background: #f3f4f6;
+        }
+
+        .sidebar-icon[data-page="dossier"] {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .chat-container {
+            margin-left: 100px;
+            padding: 20px;
+        }
+
+        .message-assistant {
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .message-title {
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        table.min-w-full.border.border-gray-200.rounded-lg {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            border: 1px solid #d1d5db;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        td {
+            color: #6b7280;
+        }
+
+        .info-box {
+            background: #e0e7ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .info-box h3 {
+            color: #4338ca;
+            margin-bottom: 8px;
+        }
+
+        .info-box p {
+            color: #6366f1;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            min-width: 250px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .status-label {
+            color: #6b7280;
+        }
+
+        .status-value {
+            font-weight: 600;
+            color: #374151;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar Mock -->
+    <div class="sidebar-mock">
+        <div class="sidebar-icon" style="background: #667eea; color: white;">🏠</div>
+        <div class="sidebar-icon" style="background: #667eea; color: white;">💬</div>
+        <div class="sidebar-icon" data-page="dossier" style="color: white;" title="Cliquez pour ouvrir le menu Dossier">
+            📁
+        </div>
+        <div class="sidebar-icon">🤖</div>
+        <div class="sidebar-icon">📚</div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <h1>🧪 Test du Menu Dossier</h1>
+
+        <div class="info-box">
+            <h3>📋 Instructions de Test</h3>
+            <p>
+                1. Cliquez sur l'icône 📁 dans la sidebar (à gauche) pour ouvrir le menu Dossier<br>
+                2. Le menu devrait apparaître sur la moitié droite de l'écran<br>
+                3. Cliquez sur les rubriques pour ouvrir/fermer l'accordéon<br>
+                4. Cliquez sur une miniature de table pour y accéder<br>
+                5. Utilisez les boutons ci-dessous pour tester différentes fonctionnalités
+            </p>
+        </div>
+
+        <div class="test-controls">
+            <button onclick="testOpenMenu()">🔓 Ouvrir Menu</button>
+            <button onclick="testCloseMenu()">🔒 Fermer Menu</button>
+            <button onclick="testToggleMenu()">🔄 Basculer Menu</button>
+            <button onclick="testRefresh()">♻️ Rafraîchir</button>
+            <button onclick="testAddMessage()">➕ Ajouter Message</button>
+            <button onclick="testClearMessages()">🗑️ Effacer Messages</button>
+            <button onclick="testConsoleDebug()">🐛 Debug Console</button>
+        </div>
+
+        <!-- Chat Container -->
+        <div class="chat-container">
+            <h2 style="margin-bottom: 20px; color: #374151;">Messages de Test</h2>
+
+            <!-- Message 1 -->
+            <div class="message-assistant" data-role="assistant">
+                <div class="message-title">Message 1 - Analyse Financière</div>
+                <p>Voici l'analyse des données financières pour le trimestre Q4 2024 :</p>
+
+                <table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th>Montant</th>
+                            <th>Variation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Revenus</td>
+                            <td>1 250 000 €</td>
+                            <td>+15%</td>
+                        </tr>
+                        <tr>
+                            <td>Charges</td>
+                            <td>850 000 €</td>
+                            <td>+8%</td>
+                        </tr>
+                        <tr>
+                            <td>Résultat Net</td>
+                            <td>400 000 €</td>
+                            <td>+32%</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg"
+                    style="margin-top: 20px;">
+                    <thead>
+                        <tr>
+                            <th>Indicateur</th>
+                            <th>Valeur</th>
+                            <th>Objectif</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Marge Brute</td>
+                            <td>32%</td>
+                            <td>30%</td>
+                        </tr>
+                        <tr>
+                            <td>ROI</td>
+                            <td>18%</td>
+                            <td>15%</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Message 2 -->
+            <div class="message-assistant" data-role="assistant">
+                <div class="message-title">Message 2 - Contrôles Internes</div>
+                <p>Résultats des tests de contrôles internes :</p>
+
+                <table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <thead>
+                        <tr>
+                            <th>Contrôle</th>
+                            <th>Statut</th>
+                            <th>Écart</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Séparation des tâches</td>
+                            <td>✅ Conforme</td>
+                            <td>0</td>
+                            <td>Aucune</td>
+                        </tr>
+                        <tr>
+                            <td>Autorisation des paiements</td>
+                            <td>⚠️ Partiel</td>
+                            <td>2</td>
+                            <td>Renforcer</td>
+                        </tr>
+                        <tr>
+                            <td>Rapprochements bancaires</td>
+                            <td>✅ Conforme</td>
+                            <td>0</td>
+                            <td>Aucune</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Message 3 -->
+            <div class="message-assistant" data-role="assistant">
+                <div class="message-title">Message 3 - Risques Identifiés</div>
+                <p>Cartographie des risques majeurs :</p>
+
+                <table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <thead>
+                        <tr>
+                            <th>Risque</th>
+                            <th>Probabilité</th>
+                            <th>Impact</th>
+                            <th>Priorité</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Fraude interne</td>
+                            <td>Faible</td>
+                            <td>Élevé</td>
+                            <td>Moyenne</td>
+                        </tr>
+                        <tr>
+                            <td>Erreurs de saisie</td>
+                            <td>Moyenne</td>
+                            <td>Moyen</td>
+                            <td>Moyenne</td>
+                        </tr>
+                        <tr>
+                            <td>Cyberattaque</td>
+                            <td>Moyenne</td>
+                            <td>Très élevé</td>
+                            <td>Haute</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg"
+                    style="margin-top: 20px;">
+                    <thead>
+                        <tr>
+                            <th>Mesure de Mitigation</th>
+                            <th>Coût</th>
+                            <th>Délai</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Formation cybersécurité</td>
+                            <td>15 000 €</td>
+                            <td>3 mois</td>
+                        </tr>
+                        <tr>
+                            <td>Audit externe</td>
+                            <td>25 000 €</td>
+                            <td>6 mois</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Panel -->
+    <div class="status">
+        <h4 style="margin-bottom: 12px; color: #374151;">📊 Statut</h4>
+        <div class="status-item">
+            <span class="status-label">Menu initialisé:</span>
+            <span class="status-value" id="status-init">❌</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Menu visible:</span>
+            <span class="status-value" id="status-visible">❌</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Messages LLM:</span>
+            <span class="status-value" id="status-messages">0</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Tables totales:</span>
+            <span class="status-value" id="status-tables">0</span>
+        </div>
+    </div>
+
+    <!-- Load Dossier Menu Script -->
+    <script src="/dossier-menu.js"></script>
+
+    <!-- Test Functions -->
+    <script>
+        // Update status panel
+        function updateStatus() {
+            const init = window.dossierMenu && window.dossierMenu.initialized;
+            const visible = window.dossierMenu && window.dossierMenu.isMenuVisible;
+
+            document.getElementById('status-init').textContent = init ? '✅' : '❌';
+            document.getElementById('status-visible').textContent = visible ? '✅' : '❌';
+
+            const messages = document.querySelectorAll('.message-assistant').length;
+            document.getElementById('status-messages').textContent = messages;
+
+            let totalTables = 0;
+            document.querySelectorAll('.message-assistant').forEach(msg => {
+                totalTables += msg.querySelectorAll('table').length;
+            });
+            document.getElementById('status-tables').textContent = totalTables;
+        }
+
+        // Test functions
+        function testOpenMenu() {
+            if (window.dossierMenu) {
+                window.dossierMenu.showMenu();
+                console.log('✅ Menu ouvert');
+                updateStatus();
+            } else {
+                console.error('❌ dossierMenu non disponible');
+            }
+        }
+
+        function testCloseMenu() {
+            if (window.dossierMenu) {
+                window.dossierMenu.hideMenu();
+                console.log('✅ Menu fermé');
+                updateStatus();
+            }
+        }
+
+        function testToggleMenu() {
+            if (window.dossierMenu) {
+                window.dossierMenu.toggleMenu();
+                console.log('✅ Menu basculé');
+                updateStatus();
+            }
+        }
+
+        function testRefresh() {
+            if (window.dossierMenu) {
+                window.dossierMenu.refreshAccordion();
+                console.log('✅ Accordéon rafraîchi');
+                updateStatus();
+            }
+        }
+
+        function testAddMessage() {
+            const chatContainer = document.querySelector('.chat-container');
+            const messageCount = document.querySelectorAll('.message-assistant').length + 1;
+
+            const newMessage = document.createElement('div');
+            newMessage.className = 'message-assistant';
+            newMessage.setAttribute('data-role', 'assistant');
+            newMessage.innerHTML = `
+                <div class="message-title">Message ${messageCount} - Nouveau Test</div>
+                <p>Message ajouté dynamiquement pour tester le rafraîchissement automatique.</p>
+                <table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+                    <thead>
+                        <tr>
+                            <th>Colonne 1</th>
+                            <th>Colonne 2</th>
+                            <th>Colonne 3</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Donnée ${messageCount}.1</td>
+                            <td>Donnée ${messageCount}.2</td>
+                            <td>Donnée ${messageCount}.3</td>
+                        </tr>
+                    </tbody>
+                </table>
+            `;
+
+            chatContainer.appendChild(newMessage);
+            console.log('✅ Message ajouté');
+            updateStatus();
+        }
+
+        function testClearMessages() {
+            const messages = document.querySelectorAll('.message-assistant');
+            messages.forEach(msg => msg.remove());
+            console.log('✅ Messages effacés');
+            updateStatus();
+        }
+
+        function testConsoleDebug() {
+            console.log('🐛 Debug Info:');
+            console.log('- dossierMenu:', window.dossierMenu);
+            console.log('- Initialized:', window.dossierMenu?.initialized);
+            console.log('- Menu Visible:', window.dossierMenu?.isMenuVisible);
+            console.log('- Messages LLM:', document.querySelectorAll('.message-assistant').length);
+
+            if (window.dossierMenu) {
+                const llmMessages = window.dossierMenu.getLLMMessagesWithTables();
+                console.log('- Messages avec tables:', llmMessages.length);
+                console.log('- Détails:', llmMessages);
+            }
+        }
+
+        // Auto-update status
+        setInterval(updateStatus, 1000);
+
+        // Initial status update
+        setTimeout(() => {
+            updateStatus();
+            console.log('✅ Page de test chargée');
+        }, 500);
+    </script>
+</body>
+
+</html>

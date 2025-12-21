@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Test n8n Cloud</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 20px;
+        }
+
+        .result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+
+        .success {
+            background: #10b981;
+            color: #fff;
+        }
+
+        .error {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 Test n8n Cloud vs Local</h1>
+
+    <button onclick="testCloud()">Test n8n CLOUD</button>
+    <button onclick="testLocal()">Test n8n LOCAL</button>
+
+    <div id="results"></div>
+
+    <script>
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(message, type) {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = message;
+            resultsDiv.appendChild(div);
+        }
+
+        async function testCloud() {
+            resultsDiv.innerHTML = '<h2>Test n8n CLOUD...</h2>';
+            const endpoint = 'https://barow52161.app.n8n.cloud/webhook/htlm_processor';
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: 'Test Cloud' })
+                });
+
+                addResult(`Status: ${response.status}`, response.status === 200 ? 'success' : 'error');
+
+                const text = await response.text();
+                addResult(`Response length: ${text.length}`, text.length > 0 ? 'success' : 'error');
+
+                if (text.length > 0) {
+                    try {
+                        const json = JSON.parse(text);
+                        addResult('✅ n8n CLOUD FONCTIONNE!', 'success');
+                        addResult(`Structure: ${JSON.stringify(json, null, 2).substring(0, 300)}`, 'success');
+                    } catch (e) {
+                        addResult('⚠️ Réponse non-JSON', 'error');
+                    }
+                } else {
+                    addResult('❌ Réponse vide - Vérifier configuration "Respond to Webhook"', 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Erreur: ${error.message}`, 'error');
+                addResult('💡 n8n Cloud inaccessible ou workflow inactif', 'error');
+            }
+        }
+
+        async function testLocal() {
+            resultsDiv.innerHTML = '<h2>Test n8n LOCAL...</h2>';
+            const endpoint = 'http://localhost:5678/webhook/htlm_processor';
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: 'Test Local' })
+                });
+
+                addResult(`Status: ${response.status}`, response.status === 200 ? 'success' : 'error');
+
+                const text = await response.text();
+                addResult(`Response length: ${text.length}`, text.length > 0 ? 'success' : 'error');
+
+                if (text.length > 0) {
+                    try {
+                        const json = JSON.parse(text);
+                        addResult('✅ n8n LOCAL FONCTIONNE!', 'success');
+                        addResult(`Structure: ${JSON.stringify(json, null, 2).substring(0, 300)}`, 'success');
+                    } catch (e) {
+                        addResult('⚠️ Réponse non-JSON', 'error');
+                    }
+                } else {
+                    addResult('❌ Réponse vide - Vérifier configuration "Respond to Webhook"', 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Erreur: ${error.message}`, 'error');
+                addResult('💡 n8n local non démarré ou CORS non configuré', 'error');
+            }
+        }
+    </script>
+</body>
+
+</html>

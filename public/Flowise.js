@@ -20,9 +20,11 @@
     "🚀 Initialisation du script dynamique de tables V17.1 (Fix réponse n8n)"
   );
 
+  //http://localhost:5678/webhook/htlm_processor
   // --- CONFIGURATION CENTRALE ---
   const CONFIG = {
-    N8N_ENDPOINT_URL: "http://localhost:5678/webhook/htlm_processor",
+    N8N_ENDPOINT_URL: "https://barow52161.app.n8n.cloud/webhook/htlm_processor",
+    DEBUG_LOG_HTML: true, // ⭐ Toujours logger le HTML dans la console (systématique)
     SELECTORS: {
       CHAT_TABLES:
         "table.min-w-full.border.border-gray-200.dark\\:border-gray-700.rounded-lg",
@@ -47,17 +49,23 @@
 
     try {
       const headers = Array.from(flowiseTable.querySelectorAll("th")).map((th) =>
-        th.textContent.trim().toLowerCase()
+        th.textContent.trim()
       );
 
+      console.log("📋 En-têtes de la table détectés:", headers);
+
+      // Recherche insensible à la casse de la colonne "Flowise"
       const flowiseColumnIndex = headers.findIndex(h =>
-        h === "flowise" || h === "FLOWISE" || h.toLowerCase() === "flowise"
+        h.toLowerCase() === "flowise"
       );
 
       if (flowiseColumnIndex === -1) {
         console.warn("⚠️ Colonne 'Flowise' non trouvée dans la table");
+        console.warn("📋 En-têtes disponibles:", headers);
         return null;
       }
+
+      console.log(`✅ Colonne 'Flowise' trouvée à l'index ${flowiseColumnIndex}`);
 
       const firstDataRow = flowiseTable.querySelector("tbody tr");
       if (!firstDataRow) {
@@ -66,8 +74,10 @@
       }
 
       const cells = firstDataRow.querySelectorAll("td");
+      console.log(`📊 Nombre de cellules dans la première ligne: ${cells.length}`);
+
       if (flowiseColumnIndex >= cells.length) {
-        console.warn("⚠️ Index de colonne invalide");
+        console.warn(`⚠️ Index de colonne invalide: ${flowiseColumnIndex} >= ${cells.length}`);
         return null;
       }
 
@@ -122,12 +132,148 @@
    * @returns {Object} {output: string, metadata: Object}
    */
   function normalizeN8nResponse(response) {
-    console.log("🔍 Normalisation de la réponse n8n...");
+    console.log("🔍 ========== NORMALISATION RÉPONSE N8N ==========");
     console.log("📦 Type de réponse:", Array.isArray(response) ? "Array" : typeof response);
+    console.log("📦 Réponse complète (1000 premiers caractères):", JSON.stringify(response, null, 2).substring(0, 1000));
 
-    // Format 1: Array avec objet contenant 'output'
+    // ⭐ NOUVEAU FORMAT: Array avec objet contenant 'response.body[0].output'
+    // Format: [{ "response": { "body": [{ "output": "...", "status": "success", ... }], ... } }]
     if (Array.isArray(response) && response.length > 0) {
+      console.log("✅ Réponse est un Array avec", response.length, "élément(s)");
       const firstItem = response[0];
+      console.log("📦 Premier élément - Type:", typeof firstItem);
+      console.log("📦 Premier élément - Clés:", firstItem ? Object.keys(firstItem) : "null");
+
+      // ⭐ NOUVEAU FORMAT HTLM_PROCESSOR: Array avec output + tables + status direct
+      // Format: [{ "output": "...", "tables": [...], "status": "success", "tables_found": 1, ... }]
+      if (firstItem && typeof firstItem === 'object' &&
+        'output' in firstItem &&
+        'tables' in firstItem &&
+        'status' in firstItem &&
+        !('response' in firstItem) &&
+        !('body' in firstItem)) {
+        console.log("🔍 Détection du format htlm_processor (output + tables + status direct)...");
+        console.log("📦 firstItem.output - Type:", typeof firstItem.output);
+        console.log("📦 firstItem.output - Longueur:", firstItem.output?.length || 0);
+        console.log("📦 firstItem.tables - Type:", Array.isArray(firstItem.tables) ? `Array[${firstItem.tables.length}]` : typeof firstItem.tables);
+        console.log("📦 firstItem.status:", firstItem.status);
+        console.log("📦 firstItem.tables_found:", firstItem.tables_found);
+
+        if (firstItem.status === 'success' && firstItem.output) {
+          console.log("✅ ✅ ✅ FORMAT DÉTECTÉ: Workflow htlm_processor (output + tables direct)");
+          console.log("📊 Status:", firstItem.status);
+          console.log("📋 Content length:", firstItem.output?.length || 0);
+          console.log("📋 Tables found:", firstItem.tables_found);
+          console.log("📋 Timestamp:", firstItem.timestamp);
+
+          return {
+            output: firstItem.output,
+            metadata: {
+              status: firstItem.status,
+              timestamp: firstItem.timestamp,
+              contentLength: firstItem.output?.length || 0,
+              tables_found: firstItem.tables_found,
+              rows_processed: firstItem.rows_processed,
+              tables: firstItem.tables
+            }
+          };
+        } else if (firstItem.status === 'error') {
+          console.error("❌ Erreur dans la réponse htlm_processor:", firstItem);
+          return {
+            output: null,
+            metadata: { error: "Erreur htlm_processor", details: firstItem }
+          };
+        } else {
+          console.warn("⚠️ firstItem.output est vide ou status n'est pas 'success'");
+        }
+      }
+
+      // ⭐ NOUVEAU: Format avec body directement (sans response wrapper)
+      // Format: [{ "body": [{ "output": "...", "status": "success", ... }], "headers": {...}, "statusCode": 200 }]
+      if (firstItem && typeof firstItem === 'object' && 'body' in firstItem && !('response' in firstItem)) {
+        console.log("🔍 Détection du format body direct (sans response wrapper)...");
+        const body = firstItem.body;
+        console.log("📦 Body détecté - Type:", Array.isArray(body) ? `Array[${body.length}]` : typeof body);
+
+        if (Array.isArray(body) && body.length > 0) {
+          console.log("📦 Body[0] - Type:", typeof body[0]);
+          console.log("📦 Body[0] - Clés:", body[0] ? Object.keys(body[0]) : "null");
+          console.log("📦 Body[0].output existe?", 'output' in body[0]);
+          console.log("📦 Body[0].output - Type:", typeof body[0].output);
+          console.log("📦 Body[0].output - Longueur:", body[0].output?.length || 0);
+          console.log("📦 Body[0].output - Aperçu (200 premiers caractères):", body[0].output?.substring(0, 200) || "vide");
+
+          if (body[0].output) {
+            console.log("✅ ✅ ✅ FORMAT DÉTECTÉ: Webhook htlm_processor (body[0].output direct)");
+            console.log("📊 Status:", body[0].status);
+            console.log("📋 Content length:", body[0].output?.length || 0);
+            console.log("📋 Timestamp:", body[0].timestamp);
+
+            return {
+              output: body[0].output,
+              metadata: {
+                status: body[0].status,
+                timestamp: body[0].timestamp,
+                contentLength: body[0].output?.length || 0,
+                tables_found: body[0].tables_found,
+                headers: firstItem.headers,
+                statusCode: firstItem.statusCode
+              }
+            };
+          } else {
+            console.warn("⚠️ body[0].output est vide ou undefined");
+          }
+        } else {
+          console.warn("⚠️ body n'est pas un Array ou est vide");
+        }
+      }
+
+      // Format avec response.body[0].output (webhook htlm_processor)
+      if (firstItem && typeof firstItem === 'object' && 'response' in firstItem) {
+        console.log("🔍 Détection du format response.body...");
+        console.log("📦 firstItem.response - Type:", typeof firstItem.response);
+        console.log("📦 firstItem.response - Clés:", firstItem.response ? Object.keys(firstItem.response) : "null");
+
+        if (firstItem.response && typeof firstItem.response === 'object' && 'body' in firstItem.response) {
+          const body = firstItem.response.body;
+          console.log("� Bodoy détecté - Type:", Array.isArray(body) ? `Array[${body.length}]` : typeof body);
+
+          if (Array.isArray(body) && body.length > 0) {
+            console.log("📦 Body[0] - Type:", typeof body[0]);
+            console.log("📦 Body[0] - Clés:", body[0] ? Object.keys(body[0]) : "null");
+            console.log("📦 Body[0].output existe?", 'output' in body[0]);
+            console.log("📦 Body[0].output - Type:", typeof body[0].output);
+            console.log("📦 Body[0].output - Longueur:", body[0].output?.length || 0);
+            console.log("📦 Body[0].output - Aperçu (200 premiers caractères):", body[0].output?.substring(0, 200) || "vide");
+
+            if (body[0].output) {
+              console.log("✅ ✅ ✅ FORMAT DÉTECTÉ: Webhook htlm_processor (response.body[0].output)");
+              console.log("📊 Status:", body[0].status);
+              console.log("📋 Content length:", body[0].output?.length || 0);
+              console.log("📋 Timestamp:", body[0].timestamp);
+
+              return {
+                output: body[0].output,
+                metadata: {
+                  status: body[0].status,
+                  timestamp: body[0].timestamp,
+                  contentLength: body[0].output?.length || 0,
+                  headers: firstItem.response.headers,
+                  statusCode: firstItem.response.statusCode
+                }
+              };
+            } else {
+              console.warn("⚠️ body[0].output est vide ou undefined");
+            }
+          } else {
+            console.warn("⚠️ body n'est pas un Array ou est vide");
+          }
+        } else {
+          console.warn("⚠️ firstItem.response n'a pas de propriété 'body'");
+        }
+      } else {
+        console.log("ℹ️ firstItem n'a pas de propriété 'response', test des autres formats...");
+      }
 
       // Format avec 'data' (Programme de travail)
       if (firstItem && typeof firstItem === 'object' && 'data' in firstItem) {
@@ -138,7 +284,33 @@
         };
       }
 
-      // Format avec 'output' standard
+      // Format avec 'output' + 'status' + 'table_format' (Workflow htlm_processor)
+      if (firstItem && typeof firstItem === 'object' && 'output' in firstItem && 'status' in firstItem) {
+        console.log("✅ Format détecté: Workflow htlm_processor (output + status + table_format)");
+        console.log("📊 Status:", firstItem.status);
+        console.log("📋 Table format:", firstItem.table_format);
+
+        // Vérifier que le status est success
+        if (firstItem.status === 'success' && firstItem.output) {
+          return {
+            output: firstItem.output,
+            metadata: {
+              status: firstItem.status,
+              table_format: firstItem.table_format,
+              processing_stats: firstItem.processing_stats,
+              timestamp: firstItem.timestamp
+            }
+          };
+        } else if (firstItem.status === 'error') {
+          console.error("❌ Erreur dans la réponse n8n:", firstItem);
+          return {
+            output: null,
+            metadata: { error: "Erreur n8n", details: firstItem }
+          };
+        }
+      }
+
+      // Format avec 'output' standard (sans status)
       if (firstItem && typeof firstItem === 'object' && 'output' in firstItem) {
         console.log("✅ Format détecté: Standard (output dans array)");
         return {
@@ -150,6 +322,39 @@
 
     // Format 2: Objet direct avec 'output'
     if (response && typeof response === 'object' && !Array.isArray(response)) {
+      // Format avec response.body[0].output (objet direct)
+      if ('response' in response && response.response && 'body' in response.response) {
+        const body = response.response.body;
+        if (Array.isArray(body) && body.length > 0 && body[0].output) {
+          console.log("✅ Format détecté: Webhook htlm_processor (objet direct avec response.body)");
+          return {
+            output: body[0].output,
+            metadata: {
+              status: body[0].status,
+              timestamp: body[0].timestamp,
+              headers: response.response.headers,
+              statusCode: response.response.statusCode
+            }
+          };
+        }
+      }
+
+      // Format avec 'output' + 'status' (objet direct)
+      if ('output' in response && 'status' in response) {
+        console.log("✅ Format détecté: Workflow htlm_processor (objet direct)");
+        if (response.status === 'success' && response.output) {
+          return {
+            output: response.output,
+            metadata: {
+              status: response.status,
+              table_format: response.table_format,
+              processing_stats: response.processing_stats,
+              timestamp: response.timestamp
+            }
+          };
+        }
+      }
+
       if ('output' in response) {
         console.log("✅ Format détecté: Output direct");
         return {
@@ -173,6 +378,7 @@
     }
 
     console.error("❌ Format de réponse non reconnu:", response);
+    console.error("📦 Structure complète:", JSON.stringify(response, null, 2));
     return {
       output: null,
       metadata: { error: "Format inconnu", rawResponse: response }
@@ -332,34 +538,73 @@
     const keywordVariations = generateKeywordVariations(dynamicKeyword);
 
     console.log(`🔍 Recherche de divs contenant le mot-clé "${dynamicKeyword}"...`);
+    console.log(`📊 Nombre total de divs à analyser: ${allDivs.length}`);
+    console.log(`🔄 Variations du mot-clé:`, keywordVariations);
 
-    allDivs.forEach((div) => {
+    let divsAnalyzed = 0;
+    let divsWithTables = 0;
+    let divsWithRequiredHeaders = 0;
+    let divsMatching = 0;
+
+    allDivs.forEach((div, divIndex) => {
+      divsAnalyzed++;
+
       const firstTable = div.querySelector(CONFIG.SELECTORS.CHAT_TABLES);
-      if (!firstTable) return;
+      if (!firstTable) {
+        console.log(`⏭️ Div ${divIndex + 1}: Pas de table, ignorée`);
+        return;
+      }
+
+      divsWithTables++;
 
       const headers = Array.from(firstTable.querySelectorAll("th")).map((th) =>
         th.textContent.trim().toLowerCase()
       );
 
+      console.log(`📋 Div ${divIndex + 1} - En-têtes de la première table:`, headers);
+
       const hasRequiredHeaders = headers.includes("rubrique") && headers.includes("description");
-      if (!hasRequiredHeaders) return;
+      if (!hasRequiredHeaders) {
+        console.log(`⏭️ Div ${divIndex + 1}: Pas d'en-têtes 'Rubrique' et 'Description', ignorée`);
+        return;
+      }
+
+      divsWithRequiredHeaders++;
 
       const cellsOfFirstTable = firstTable.querySelectorAll("td");
+      const cellTexts = Array.from(cellsOfFirstTable).map(cell => cell.textContent.trim());
+
+      console.log(`📊 Div ${divIndex + 1} - Contenu des cellules:`, cellTexts);
+
       const keywordFound = Array.from(cellsOfFirstTable).some((cell) => {
         const cellText = cell.textContent.trim();
-        return keywordVariations.some((variation) =>
+        const found = keywordVariations.some((variation) =>
           cellText.toLowerCase().includes(variation.toLowerCase())
         );
+        if (found) {
+          console.log(`✅ Div ${divIndex + 1} - Mot-clé trouvé dans la cellule: "${cellText}"`);
+        }
+        return found;
       });
 
       if (keywordFound) {
-        console.log(`✅ Div correspondante trouvée pour le mot-clé "${dynamicKeyword}". Collecte des tables...`);
+        divsMatching++;
+        console.log(`✅ Div ${divIndex + 1}: Correspondance trouvée pour le mot-clé "${dynamicKeyword}". Collecte des tables...`);
         const allTablesInDiv = div.querySelectorAll(CONFIG.SELECTORS.CHAT_TABLES);
+        console.log(`📋 Div ${divIndex + 1}: ${allTablesInDiv.length} table(s) collectée(s)`);
         allTablesInDiv.forEach((table) => {
           collectedTablesHTML.push(table.outerHTML);
         });
+      } else {
+        console.log(`⏭️ Div ${divIndex + 1}: Aucune correspondance avec le mot-clé "${dynamicKeyword}"`);
       }
     });
+
+    console.log(`📊 Statistiques de collecte:`);
+    console.log(`   - Divs analysées: ${divsAnalyzed}`);
+    console.log(`   - Divs avec tables: ${divsWithTables}`);
+    console.log(`   - Divs avec en-têtes requis: ${divsWithRequiredHeaders}`);
+    console.log(`   - Divs correspondantes: ${divsMatching}`);
 
     if (triggerTable) {
       console.log(`📋 Ajout de la table déclencheuse pour le mot-clé "${dynamicKeyword}"`);
@@ -388,6 +633,139 @@
     return `n8n_${Math.abs(hash)}`;
   }
 
+  /**
+   * Affiche le contenu HTML envoyé vers n8n dans la console (systématique)
+   * @param {string} tablesHTML - Le contenu HTML à afficher
+   * @param {string} targetKeyword - Le mot-clé cible
+   */
+  function logHTMLToConsole(tablesHTML, targetKeyword) {
+    console.log("\n");
+    console.log("═══════════════════════════════════════════════════════════════════");
+    console.log("🔍 CONTENU HTML ENVOYÉ VERS N8N");
+    console.log("═══════════════════════════════════════════════════════════════════");
+    console.log("");
+    console.log("🎯 Mot-clé:", targetKeyword);
+    console.log("📊 Taille totale:", tablesHTML.length, "caractères");
+    console.log("📡 Endpoint:", CONFIG.N8N_ENDPOINT_URL);
+    console.log("⏰ Timestamp:", new Date().toISOString());
+    console.log("");
+    console.log("═══════════════════════════════════════════════════════════════════");
+    console.log("📋 CONTENU HTML COMPLET:");
+    console.log("═══════════════════════════════════════════════════════════════════");
+    console.log("");
+    console.log(tablesHTML);
+    console.log("");
+    console.log("═══════════════════════════════════════════════════════════════════");
+    console.log("💡 ASTUCE: Clic droit sur le HTML ci-dessus → 'Copy string contents'");
+    console.log("💡 Puis testez dans n8n avec curl ou fetch");
+    console.log("═══════════════════════════════════════════════════════════════════");
+    console.log("\n");
+  }
+
+  /**
+   * Affiche une alert avec la réponse de l'endpoint n8n
+   * @param {string} output - Le contenu de la réponse normalisée
+   * @param {Object} metadata - Les métadonnées de la réponse
+   * @param {string} targetKeyword - Le mot-clé cible
+   */
+  function showN8nResponseAlert(output, metadata, targetKeyword) {
+    const maxLength = 3000;
+    const truncated = output.length > maxLength;
+    const displayOutput = truncated ? output.substring(0, maxLength) + '\n\n... (tronqué)' : output;
+
+    const message = `
+═══════════════════════════════════════════════════════════════════
+📥 RÉPONSE REÇUE DE N8N
+═══════════════════════════════════════════════════════════════════
+
+🎯 Mot-clé: ${targetKeyword}
+📊 Taille de l'output: ${output.length} caractères
+📡 Endpoint: ${CONFIG.N8N_ENDPOINT_URL}
+✅ Status: ${metadata.status || 'N/A'}
+🕐 Timestamp: ${metadata.timestamp || 'N/A'}
+${truncated ? '⚠️ Contenu tronqué (affichage limité à ' + maxLength + ' caractères)' : ''}
+
+═══════════════════════════════════════════════════════════════════
+📋 CONTENU DE LA RÉPONSE (Markdown):
+═══════════════════════════════════════════════════════════════════
+
+${displayOutput}
+
+═══════════════════════════════════════════════════════════════════
+📊 MÉTADONNÉES:
+═══════════════════════════════════════════════════════════════════
+
+${JSON.stringify(metadata, null, 2)}
+
+═══════════════════════════════════════════════════════════════════
+💡 ASTUCE: Le contenu complet est dans la console
+═══════════════════════════════════════════════════════════════════
+    `.trim();
+
+    alert(message);
+
+    console.log("📥 ========== RÉPONSE N8N COMPLÈTE ==========");
+    console.log("Output:", output);
+    console.log("Metadata:", metadata);
+    console.log("📥 ========== FIN DE LA RÉPONSE N8N ==========");
+  }
+
+  /**
+   * Affiche une alert avec le résultat final de l'affichage
+   * @param {Array} n8nTables - Les tables HTML extraites
+   * @param {string} targetKeyword - Le mot-clé cible
+   * @param {HTMLElement} targetContainer - Le conteneur cible
+   */
+  function showFinalResultAlert(n8nTables, targetKeyword, targetContainer) {
+    const tablesHTML = n8nTables.map((table, index) => {
+      const tableHTML = table.outerHTML;
+      const preview = tableHTML.substring(0, 300);
+      return `Table ${index + 1}:\n${preview}${tableHTML.length > 300 ? '...' : ''}`;
+    }).join('\n\n');
+
+    const maxLength = 3000;
+    const truncated = tablesHTML.length > maxLength;
+    const displayHTML = truncated ? tablesHTML.substring(0, maxLength) + '\n\n... (tronqué)' : tablesHTML;
+
+    const message = `
+═══════════════════════════════════════════════════════════════════
+🎉 AFFICHAGE FINAL DANS LE CHAT
+═══════════════════════════════════════════════════════════════════
+
+🎯 Mot-clé: ${targetKeyword}
+📊 Nombre de tables affichées: ${n8nTables.length}
+📍 Conteneur: ${targetContainer.className}
+${truncated ? '⚠️ Aperçu tronqué (affichage limité à ' + maxLength + ' caractères)' : ''}
+
+═══════════════════════════════════════════════════════════════════
+📋 APERÇU DES TABLES AFFICHÉES:
+═══════════════════════════════════════════════════════════════════
+
+${displayHTML}
+
+═══════════════════════════════════════════════════════════════════
+✅ RÉSULTAT:
+═══════════════════════════════════════════════════════════════════
+
+✅ ${n8nTables.length} table(s) ont été affichées dans le chat
+✅ La table déclencheuse a été supprimée
+✅ Le traitement est terminé avec succès
+
+═══════════════════════════════════════════════════════════════════
+💡 ASTUCE: Vérifiez le chat pour voir les tables affichées
+═══════════════════════════════════════════════════════════════════
+    `.trim();
+
+    alert(message);
+
+    console.log("🎉 ========== AFFICHAGE FINAL ==========");
+    console.log(`${n8nTables.length} table(s) affichée(s)`);
+    n8nTables.forEach((table, index) => {
+      console.log(`Table ${index + 1}:`, table.outerHTML);
+    });
+    console.log("🎉 ========== FIN DE L'AFFICHAGE ==========");
+  }
+
   async function queryN8nEndpoint(tablesHTML, targetKeyword) {
     try {
       const cacheKey = generateCacheKey(tablesHTML);
@@ -399,29 +777,91 @@
       }
 
       console.log("📡 Envoi des données vers n8n...");
+      console.log("🔗 Endpoint:", CONFIG.N8N_ENDPOINT_URL);
+      console.log("📊 Taille des données:", tablesHTML.length, "caractères");
+      console.log("🎯 Mot-clé cible:", targetKeyword);
+
+      const payload = { question: tablesHTML };
+      console.log("📦 Payload envoyé:", JSON.stringify(payload).substring(0, 300) + "...");
+
+      // ⭐ LOG SYSTÉMATIQUE: Afficher le contenu HTML envoyé dans la console
+      if (CONFIG.DEBUG_LOG_HTML) {
+        logHTMLToConsole(tablesHTML, targetKeyword);
+      }
+
       const response = await fetch(CONFIG.N8N_ENDPOINT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json"
         },
-        body: JSON.stringify({ question: tablesHTML }),
+        body: JSON.stringify(payload),
       });
 
+      console.log("� Réponsee HTTP reçue:");
+      console.log("   - Status:", response.status);
+      console.log("   - Status Text:", response.statusText);
+      console.log("   - Headers:", Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Erreur HTTP:", errorText);
         throw new Error(`Erreur HTTP ${response.status}: ${response.statusText}`);
       }
 
       console.log(`✅ Données reçues de l'endpoint n8n ! Statut: ${response.status} OK`);
-      const responseData = await response.json();
 
-      console.log("📦 Réponse brute n8n:", responseData);
+      // 🚨 FIX V17.2: Toujours essayer de parser le JSON, même si content-length est 0
+      // Car n8n peut envoyer des données sans mettre à jour ce header correctement
+      const contentLength = response.headers.get('content-length');
+      console.log("📏 Content-Length:", contentLength);
+
+      if (contentLength === '0' || contentLength === 0) {
+        console.warn('⚠️ Content-Length est 0, mais tentative de parsing JSON quand même...');
+      }
+
+      // Toujours essayer de lire le body
+      let responseData;
+      try {
+        const responseText = await response.text();
+        console.log("📄 Response text length:", responseText.length);
+        console.log("📄 Response text preview:", responseText.substring(0, 500));
+
+        if (!responseText || responseText.trim() === '') {
+          console.error('❌ RÉPONSE VRAIMENT VIDE DE N8N');
+          console.error('💡 Vérifier la configuration du node "Respond to Webhook" dans n8n');
+          console.error('💡 Le node doit avoir "Respond With" = "All Incoming Items"');
+          console.error('💡 Ou "Respond With" = "First Incoming Item"');
+
+          return {
+            output: "⚠️ Réponse vide de n8n. Vérifier la configuration du workflow.",
+            status: "empty_response",
+            timestamp: new Date().toISOString(),
+            error: "response body is empty"
+          };
+        }
+
+        responseData = JSON.parse(responseText);
+        console.log("✅ JSON parsé avec succès");
+      } catch (parseError) {
+        console.error("❌ Erreur lors du parsing JSON:", parseError);
+        console.error("📄 Contenu reçu:", responseText?.substring(0, 1000));
+        throw new Error(`Impossible de parser la réponse JSON: ${parseError.message}`);
+      }
+
+      console.log("📦 Réponse brute n8n (type):", Array.isArray(responseData) ? "Array" : typeof responseData);
+      console.log("📦 Réponse brute n8n (structure):", JSON.stringify(responseData, null, 2).substring(0, 500) + "...");
+
+      // ⭐ IMPORTANT: Ne plus extraire directement, laisser normalizeN8nResponse gérer
+      // La fonction normalizeN8nResponse va gérer tous les formats
+      console.log("🔄 Passage de la réponse brute à normalizeN8nResponse");
 
       saveToCache(cacheKey, responseData, targetKeyword);
 
       return responseData;
     } catch (error) {
       console.error("❌ Erreur lors de l'appel à l'API n8n:", error);
+      console.error("📍 Stack trace:", error.stack);
       throw error;
     }
   }
@@ -639,8 +1079,11 @@
    * VERSION CORRIGÉE avec normalizeN8nResponse
    */
   async function processN8nTrigger(triggerTable) {
+    console.log("🎬 === DÉBUT DU TRAITEMENT D'UNE TABLE FLOWISE ===");
+
     const parentDiv = triggerTable.closest(CONFIG.SELECTORS.PARENT_DIV);
     if (!parentDiv || parentDiv.classList.contains(CONFIG.PROCESSED_CLASS)) {
+      console.log("⏭️ Table déjà traitée ou parent invalide, ignorée");
       return;
     }
 
@@ -650,57 +1093,92 @@
       return;
     }
 
+    console.log(`🎯 Mot-clé dynamique détecté: "${dynamicKeyword}"`);
     parentDiv.classList.add(CONFIG.PROCESSED_CLASS);
 
     try {
+      console.log("📝 Étape 1: Extraction du message utilisateur...");
       const userMessageContent = findAndExtractUserMessage(triggerTable);
       let userMessageTableHTML = "";
 
       if (userMessageContent) {
+        console.log("✅ Message utilisateur trouvé:", userMessageContent.substring(0, 100) + "...");
         userMessageTableHTML = createUserMessageTableHTML(userMessageContent);
+      } else {
+        console.log("ℹ️ Aucun message utilisateur trouvé");
       }
 
+      console.log("📊 Étape 2: Collecte des tables de critères...");
       const criteriaTablesHTML = collectCriteriaTables(dynamicKeyword, triggerTable, userMessageTableHTML);
 
       if (!criteriaTablesHTML) {
         throw new Error(`Aucune table de critère trouvée pour le mot-clé : "${dynamicKeyword}"`);
       }
 
+      console.log(`✅ Tables collectées: ${criteriaTablesHTML.length} caractères`);
+
       // Appel à l'endpoint n8n
+      console.log("� Étapde 3: Envoi vers l'endpoint n8n...");
       const response = await queryN8nEndpoint(criteriaTablesHTML, dynamicKeyword);
+      console.log("✅ Réponse reçue de n8n");
 
       // ⭐ NOUVEAU: Normaliser la réponse pour gérer tous les formats
+      console.log("🔄 Étape 4: Normalisation de la réponse n8n...");
       const { output, metadata } = normalizeN8nResponse(response);
 
       if (!output || output.trim() === '') {
-        console.error("❌ Réponse n8n brute:", response);
+        console.error("❌ Output vide ou null après normalisation");
+        console.error("📦 Réponse n8n brute:", JSON.stringify(response, null, 2).substring(0, 500));
         throw new Error("Réponse de n8n invalide ou vide");
       }
 
-      console.log("🔥 Réponse n8n normalisée:", output.substring(0, 200) + "...");
+      console.log("✅ Réponse normalisée avec succès");
+      console.log("📊 Taille de l'output:", output.length, "caractères");
+      console.log("🔥 Aperçu de l'output:", output.substring(0, 200) + "...");
       console.log("📊 Métadonnées:", metadata);
 
+      // ⭐ ALERT: Afficher la réponse n8n (si activé)
+      if (CONFIG.DEBUG_ALERT_HTML) {
+        showN8nResponseAlert(output, metadata, dynamicKeyword);
+      }
+
+      console.log("🔧 Étape 5: Extraction des tables depuis l'output...");
       const n8nTables = extractTablesFromResponse(output);
 
       if (!n8nTables.length) {
         console.warn("⚠️ Aucune table trouvée dans la réponse");
-        console.log("📄 Contenu reçu:", output);
+        console.log("📄 Contenu complet reçu:", output.substring(0, 1000));
         throw new Error("Aucune table trouvée dans la réponse n8n");
       }
 
+      console.log(`✅ ${n8nTables.length} table(s) extraite(s)`);
+
+      console.log("🎯 Étape 6: Recherche du conteneur cible...");
       const targetContainer = findTargetContainer(triggerTable);
 
       if (!targetContainer) {
         throw new Error("Impossible de trouver le conteneur cible");
       }
 
+      console.log("✅ Conteneur cible trouvé");
+
+      console.log("🔧 Étape 7: Intégration des tables dans le DOM...");
       integrateTablesOnly(n8nTables, targetContainer, dynamicKeyword);
+
+      console.log("🗑️ Étape 8: Suppression de la table déclencheuse...");
       removeTriggerTable(triggerTable, dynamicKeyword);
 
-      console.log(`🎉 Traitement complet réussi pour "${dynamicKeyword}"`);
+      console.log(`🎉 === TRAITEMENT COMPLET RÉUSSI POUR "${dynamicKeyword}" ===`);
+
+      // ⭐ ALERT: Afficher le résultat final (si activé)
+      if (CONFIG.DEBUG_ALERT_HTML) {
+        showFinalResultAlert(n8nTables, dynamicKeyword, targetContainer);
+      }
 
     } catch (error) {
-      console.error(`❌ Erreur lors du traitement pour le mot-clé dynamique:`, error);
+      console.error(`❌ === ERREUR LORS DU TRAITEMENT POUR "${dynamicKeyword}" ===`);
+      console.error("📍 Message d'erreur:", error.message);
+      console.error("📍 Stack trace:", error.stack);
 
       const errorMessage = document.createElement("div");
       errorMessage.className = "my-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg";
@@ -731,10 +1209,16 @@
   function scanAndProcess() {
     const allTables = document.querySelectorAll(CONFIG.SELECTORS.CHAT_TABLES);
     let processedCount = 0;
+    let totalTablesScanned = 0;
 
-    allTables.forEach((table) => {
+    console.log(`🔎 Scanner: Analyse de ${allTables.length} table(s) dans le DOM...`);
+
+    allTables.forEach((table, index) => {
+      totalTablesScanned++;
+
       const parentDiv = table.closest(CONFIG.SELECTORS.PARENT_DIV);
       if (parentDiv && parentDiv.classList.contains(CONFIG.PROCESSED_CLASS)) {
+        console.log(`⏭️ Table ${index + 1}: Déjà traitée, ignorée`);
         return;
       }
 
@@ -742,15 +1226,18 @@
         th.textContent.trim().toLowerCase()
       );
 
+      console.log(`📋 Table ${index + 1} - En-têtes:`, headers);
+
       if (headers.includes("flowise")) {
+        console.log(`✅ Table ${index + 1}: Colonne 'Flowise' détectée ! Traitement en cours...`);
         processN8nTrigger(table);
         processedCount++;
+      } else {
+        console.log(`⏭️ Table ${index + 1}: Pas de colonne 'Flowise', ignorée`);
       }
     });
 
-    if (processedCount > 0) {
-      console.log(`🔎 Scanner: ${processedCount} nouvelles tables Flowise détectées`);
-    }
+    console.log(`📊 Scanner terminé: ${processedCount} table(s) Flowise traitée(s) sur ${totalTablesScanned} table(s) analysée(s)`);
   }
 
   const observer = new MutationObserver((mutations) => {
@@ -877,6 +1364,16 @@
       });
       return data;
     },
+    enableHTMLLog: () => {
+      CONFIG.DEBUG_LOG_HTML = true;
+      console.log('✅ Log HTML activé - Le HTML sera affiché dans la console');
+      console.log('💡 Pour désactiver: window.ClaraverseN8nV17.disableHTMLLog()');
+    },
+    disableHTMLLog: () => {
+      CONFIG.DEBUG_LOG_HTML = false;
+      console.log('✅ Log HTML désactivé');
+    },
+    logHTMLToConsole: logHTMLToConsole,
     testN8nConnection: async () => {
       try {
         console.log("🧪 Test de connexion n8n...");
@@ -911,5 +1408,8 @@
   console.log("   - window.ClaraverseN8nV17.getCacheInfo()");
   console.log("   - window.ClaraverseN8nV17.clearAllCache()");
   console.log("   - window.ClaraverseN8nV17.scanAndProcess()");
+  console.log("   - window.ClaraverseN8nV17.enableHTMLLog() ⭐ Activer/désactiver le log HTML");
+  console.log("   - window.ClaraverseN8nV17.disableHTMLLog()");
+  console.log("💡 Le HTML envoyé est TOUJOURS loggé dans la console (CONFIG.DEBUG_LOG_HTML = true)");
 
 })();

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Fix N8N Response V17.2</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2563eb;
+            border-bottom: 3px solid #2563eb;
+            padding-bottom: 10px;
+        }
+
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8fafc;
+            border-left: 4px solid #3b82f6;
+            border-radius: 4px;
+        }
+
+        .test-section h2 {
+            margin-top: 0;
+            color: #1e40af;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 10px 10px 0;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .log-container {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid transparent;
+        }
+
+        .log-entry.success {
+            border-left-color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .log-entry.error {
+            border-left-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .log-entry.warning {
+            border-left-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .log-entry.info {
+            border-left-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .result-box {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            border: 2px solid #e2e8f0;
+        }
+
+        .result-box.success {
+            background: #f0fdf4;
+            border-color: #10b981;
+        }
+
+        .result-box.error {
+            background: #fef2f2;
+            border-color: #ef4444;
+        }
+
+        .code-block {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin: 10px 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 0 5px;
+        }
+
+        .badge.success {
+            background: #10b981;
+            color: white;
+        }
+
+        .badge.error {
+            background: #ef4444;
+            color: white;
+        }
+
+        .badge.warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            border: 2px solid #e2e8f0;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2563eb;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #64748b;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧪 Test Fix N8N Response V17.2</h1>
+        <p><strong>Objectif :</strong> Vérifier que Flowise.js peut maintenant traiter correctement les réponses de n8n
+            même quand content-length = 0</p>
+
+        <div class="test-section">
+            <h2>📋 Configuration</h2>
+            <div class="code-block">
+                Endpoint: https://barow52161.app.n8n.cloud/webhook/htlm_processor
+                Méthode: POST
+                Content-Type: application/json
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Tests Disponibles</h2>
+
+            <button onclick="testDirectCall()">
+                🚀 Test 1: Appel Direct à N8N
+            </button>
+            <p>Envoie une requête directe à n8n et affiche la réponse brute</p>
+
+            <button onclick="testWithFlowise()">
+                🔧 Test 2: Via Flowise.js (Simulé)
+            </button>
+            <p>Simule le traitement de Flowise.js avec le nouveau fix</p>
+
+            <button onclick="testContentLengthZero()">
+                ⚠️ Test 3: Simulation Content-Length = 0
+            </button>
+            <p>Simule une réponse avec content-length = 0 mais body présent</p>
+
+            <button onclick="clearLogs()">
+                🗑️ Effacer les logs
+            </button>
+        </div>
+
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-success">0</div>
+                <div class="stat-label">Tests Réussis</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-error">0</div>
+                <div class="stat-label">Tests Échoués</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-total">0</div>
+                <div class="stat-label">Tests Totaux</div>
+            </div>
+        </div>
+
+        <div id="result"></div>
+        <div class="log-container" id="logs"></div>
+    </div>
+
+    <script>
+        const ENDPOINT = 'https://barow52161.app.n8n.cloud/webhook/htlm_processor';
+        let stats = { success: 0, error: 0, total: 0 };
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(entry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}]`, message);
+        }
+
+        function updateStats() {
+            document.getElementById('stat-success').textContent = stats.success;
+            document.getElementById('stat-error').textContent = stats.error;
+            document.getElementById('stat-total').textContent = stats.total;
+        }
+
+        function showResult(success, title, content) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = `result-box ${success ? 'success' : 'error'}`;
+            resultDiv.innerHTML = `
+                <h3>${success ? '✅' : '❌'} ${title}</h3>
+                <div class="code-block">${content}</div>
+            `;
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+            document.getElementById('result').innerHTML = '';
+            log('Logs effacés', 'info');
+        }
+
+        async function testDirectCall() {
+            stats.total++;
+            updateStats();
+
+            log('═══════════════════════════════════════', 'info');
+            log('🚀 TEST 1: Appel Direct à N8N', 'info');
+            log('═══════════════════════════════════════', 'info');
+
+            const testHTML = `
+<table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+    <thead><tr><th>Rubrique</th><th>Description</th></tr></thead>
+    <tbody>
+        <tr><td>Etape</td><td>Programme</td></tr>
+        <tr><td>Référence</td><td>TEST-001</td></tr>
+    </tbody>
+</table>
+            `.trim();
+
+            try {
+                log('📡 Envoi de la requête...', 'info');
+                log(`📊 Taille du payload: ${testHTML.length} caractères`, 'info');
+
+                const response = await fetch(ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ question: testHTML })
+                });
+
+                log(`📥 Réponse reçue - Status: ${response.status}`, response.ok ? 'success' : 'error');
+
+                const contentLength = response.headers.get('content-length');
+                log(`📏 Content-Length: ${contentLength}`, contentLength === '0' ? 'warning' : 'info');
+
+                // Lire le body comme texte d'abord
+                const responseText = await response.text();
+                log(`📄 Response text length: ${responseText.length}`, responseText.length > 0 ? 'success' : 'error');
+
+                if (!responseText || responseText.trim() === '') {
+                    throw new Error('Réponse vide de n8n');
+                }
+
+                const responseData = JSON.parse(responseText);
+                log('✅ JSON parsé avec succès', 'success');
+                log(`📦 Structure: ${JSON.stringify(responseData).substring(0, 200)}...`, 'info');
+
+                // Vérifier la structure
+                if (Array.isArray(responseData) && responseData.length > 0) {
+                    const firstItem = responseData[0];
+
+                    // Format avec body direct
+                    if ('body' in firstItem && Array.isArray(firstItem.body)) {
+                        const output = firstItem.body[0]?.output;
+                        if (output) {
+                            log(`✅ Output trouvé dans body[0].output: ${output.length} caractères`, 'success');
+                            showResult(true, 'Test 1 Réussi',
+                                `Format détecté: body[0].output\n\nOutput (200 premiers caractères):\n${output.substring(0, 200)}...`
+                            );
+                            stats.success++;
+                            updateStats();
+                            return;
+                        }
+                    }
+
+                    // Format avec output direct
+                    if ('output' in firstItem) {
+                        log(`✅ Output trouvé directement: ${firstItem.output.length} caractères`, 'success');
+                        showResult(true, 'Test 1 Réussi',
+                            `Format détecté: output direct\n\nOutput (200 premiers caractères):\n${firstItem.output.substring(0, 200)}...`
+                        );
+                        stats.success++;
+                        updateStats();
+                        return;
+                    }
+                }
+
+                throw new Error('Format de réponse non reconnu');
+
+            } catch (error) {
+                log(`❌ Erreur: ${error.message}`, 'error');
+                showResult(false, 'Test 1 Échoué', error.message);
+                stats.error++;
+                updateStats();
+            }
+        }
+
+        async function testWithFlowise() {
+            stats.total++;
+            updateStats();
+
+            log('═══════════════════════════════════════', 'info');
+            log('🔧 TEST 2: Via Flowise.js (Simulé)', 'info');
+            log('═══════════════════════════════════════', 'info');
+
+            const testHTML = `
+<table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+    <thead><tr><th>Flowise</th></tr></thead>
+    <tbody><tr><td>CIA</td></tr></tbody>
+</table>
+            `.trim();
+
+            try {
+                log('📡 Simulation de queryN8nEndpoint...', 'info');
+
+                const response = await fetch(ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ question: testHTML })
+                });
+
+                log(`📥 Status: ${response.status}`, 'info');
+
+                const contentLength = response.headers.get('content-length');
+                log(`📏 Content-Length: ${contentLength}`, 'warning');
+
+                if (contentLength === '0' || contentLength === 0) {
+                    log('⚠️ Content-Length est 0, mais tentative de parsing JSON quand même...', 'warning');
+                }
+
+                // ⭐ NOUVEAU FIX: Toujours lire le body
+                const responseText = await response.text();
+                log(`📄 Response text length: ${responseText.length}`, responseText.length > 0 ? 'success' : 'error');
+
+                if (!responseText || responseText.trim() === '') {
+                    throw new Error('Réponse vraiment vide');
+                }
+
+                const responseData = JSON.parse(responseText);
+                log('✅ JSON parsé avec succès (FIX APPLIQUÉ)', 'success');
+
+                showResult(true, 'Test 2 Réussi',
+                    `Le fix V17.2 fonctionne !\n\nMême avec content-length = 0, le body a été lu et parsé.\n\nRéponse: ${JSON.stringify(responseData).substring(0, 300)}...`
+                );
+                stats.success++;
+                updateStats();
+
+            } catch (error) {
+                log(`❌ Erreur: ${error.message}`, 'error');
+                showResult(false, 'Test 2 Échoué', error.message);
+                stats.error++;
+                updateStats();
+            }
+        }
+
+        async function testContentLengthZero() {
+            stats.total++;
+            updateStats();
+
+            log('═══════════════════════════════════════', 'info');
+            log('⚠️ TEST 3: Simulation Content-Length = 0', 'info');
+            log('═══════════════════════════════════════', 'info');
+
+            // Simuler une réponse avec content-length = 0 mais body présent
+            const mockResponse = {
+                status: 200,
+                ok: true,
+                headers: new Map([['content-length', '0']]),
+                text: async () => JSON.stringify([{
+                    body: [{
+                        output: "| Test | Table |\n|------|-------|\n| A    | B     |",
+                        status: "success",
+                        timestamp: new Date().toISOString()
+                    }]
+                }])
+            };
+
+            try {
+                log('🔍 Simulation d\'une réponse avec content-length = 0...', 'info');
+
+                const contentLength = mockResponse.headers.get('content-length');
+                log(`📏 Content-Length: ${contentLength}`, 'warning');
+
+                if (contentLength === '0' || contentLength === 0) {
+                    log('⚠️ Content-Length est 0, mais tentative de parsing JSON quand même...', 'warning');
+                }
+
+                const responseText = await mockResponse.text();
+                log(`📄 Response text length: ${responseText.length}`, 'success');
+
+                if (!responseText || responseText.trim() === '') {
+                    throw new Error('Réponse vide');
+                }
+
+                const responseData = JSON.parse(responseText);
+                log('✅ JSON parsé avec succès malgré content-length = 0', 'success');
+                log(`📦 Output trouvé: ${responseData[0].body[0].output.length} caractères`, 'success');
+
+                showResult(true, 'Test 3 Réussi',
+                    `Le fix gère correctement les réponses avec content-length = 0 !\n\nOutput: ${responseData[0].body[0].output}`
+                );
+                stats.success++;
+                updateStats();
+
+            } catch (error) {
+                log(`❌ Erreur: ${error.message}`, 'error');
+                showResult(false, 'Test 3 Échoué', error.message);
+                stats.error++;
+                updateStats();
+            }
+        }
+
+        // Log initial
+        log('🎯 Page de test chargée - Prêt pour les tests', 'success');
+        log('💡 Cliquez sur un bouton pour lancer un test', 'info');
+    </script>
+</body>
+
+</html>

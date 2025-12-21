@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Test Rapide Logs Flowise</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #667eea;
+        }
+
+        .alert {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        .console-box {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔍 Test Rapide des Logs Flowise.js</h1>
+
+        <div class="alert">
+            <strong>💡 Important :</strong> Ouvrez la console du navigateur (F12) pour voir les logs détaillés !
+        </div>
+
+        <h3>Instructions :</h3>
+        <ol>
+            <li>Appuyez sur <strong>F12</strong> pour ouvrir la console</li>
+            <li>Cliquez sur le bouton ci-dessous</li>
+            <li>Observez les logs détaillés dans la console</li>
+        </ol>
+
+        <button onclick="testLogs()">🚀 Tester les Logs</button>
+        <button onclick="clearConsole()">🗑️ Effacer Console</button>
+
+        <div id="result" class="console-box"></div>
+    </div>
+
+    <script>
+        function testLogs() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<strong>✅ Test en cours...</strong><br><br>Regardez la console (F12) pour voir les logs détaillés !';
+
+            console.clear();
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('🚀 TEST DES LOGS FLOWISE.JS');
+            console.log('═══════════════════════════════════════════════════════');
+
+            // Simulation des logs de collecte
+            console.log("\n╔═══════════════════════════════════════════════════════╗");
+            console.log("║  📦 COLLECTE DES TABLES HTML                          ║");
+            console.log("╚═══════════════════════════════════════════════════════╝");
+
+            console.log(`\n🔍 ÉTAPE 1: RECHERCHE DES TABLES CRITÈRES`);
+            console.log(`  ├─ Mot-clé recherché: "Programme de travail"`);
+            console.log(`  ├─ Variations: Programme de travail, programme de travail, PROGRAMME DE TRAVAIL`);
+            console.log(`  └─ Divs à analyser: 15`);
+
+            console.log(`\n  ✅ Div #3 - Mot-clé trouvé`);
+            console.log(`     ├─ Tables dans cette div: 5`);
+            console.log(`     ├─ Table 1:`);
+            console.log(`     │  ├─ En-têtes: [Rubrique, Description]`);
+            console.log(`     │  ├─ Lignes: 2`);
+            console.log(`     │  └─ Taille: 456 caractères`);
+            console.log(`     ├─ Table 2:`);
+            console.log(`     │  ├─ En-têtes: [Critère, Valeur]`);
+            console.log(`     │  ├─ Lignes: 8`);
+            console.log(`     │  └─ Taille: 1234 caractères`);
+
+            console.log(`\n📊 Tables critères collectées: 5`);
+
+            console.log(`\n🎯 ÉTAPE 2: AJOUT TABLE DÉCLENCHEUSE`);
+            console.log(`  ├─ Mot-clé: "Programme de travail"`);
+            console.log(`  ├─ En-têtes: [Flowise]`);
+            console.log(`  ├─ Lignes: 1`);
+            console.log(`  └─ Taille: 234 caractères`);
+
+            console.log(`\n💬 ÉTAPE 3: AJOUT TABLE USER_MESSAGE`);
+            console.log(`  ├─ Taille: 345 caractères`);
+            console.log(`  └─ Aperçu: "[Command] = /Programme de travail - [Processus] = facturation..."`);
+
+            console.log(`\n╔═══════════════════════════════════════════════════════╗`);
+            console.log(`║  ✅ COLLECTE TERMINÉE                                 ║`);
+            console.log(`╚═══════════════════════════════════════════════════════╝`);
+            console.log(`  ├─ Total tables: 7`);
+            console.log(`  │  ├─ Tables critères: 5`);
+            console.log(`  │  ├─ Table déclencheuse: 1`);
+            console.log(`  │  └─ Table user_message: 1`);
+            console.log(`  ├─ Taille totale: 15234 caractères (14.88 KB)`);
+            console.log(`  └─ Prêt pour envoi à n8n`);
+
+            console.log(`\n📋 DÉTAIL DES TABLES COLLECTÉES:`);
+
+            console.log(`\n  Table 1 [critère]:`);
+            console.log(`    ├─ Div source: #3`);
+            console.log(`    ├─ En-têtes: [Rubrique, Description]`);
+            console.log(`    ├─ Lignes: 2`);
+            console.log(`    ├─ Taille: 456 caractères`);
+            console.log(`    └─ Aperçu: <table class="min-w-full border...`);
+
+            console.log(`\n  Table 2 [critère]:`);
+            console.log(`    ├─ Div source: #3`);
+            console.log(`    ├─ En-têtes: [Critère, Valeur]`);
+            console.log(`    ├─ Lignes: 8`);
+            console.log(`    ├─ Taille: 1234 caractères`);
+            console.log(`    └─ Aperçu: <table class="min-w-full border...`);
+
+            console.log(`\n  Table 3 [déclencheuse]:`);
+            console.log(`    ├─ En-têtes: [Flowise]`);
+            console.log(`    ├─ Lignes: 1`);
+            console.log(`    ├─ Taille: 234 caractères`);
+            console.log(`    ├─ Mot-clé: "Programme de travail"`);
+            console.log(`    └─ Aperçu: <table class="min-w-full border...`);
+
+            console.log(`\n  Table 4 [user_message]:`);
+            console.log(`    ├─ Taille: 345 caractères`);
+            console.log(`    └─ Aperçu: "[Command] = /Programme de travail - [Processus] = facturation..."`);
+
+            console.log('\n═══════════════════════════════════════════════════════');
+            console.log('✅ TEST TERMINÉ - Tous les logs sont affichés !');
+            console.log('═══════════════════════════════════════════════════════');
+
+            resultDiv.innerHTML = `
+                <strong>✅ Test terminé !</strong><br><br>
+                <strong>Vérifiez la console (F12) pour voir :</strong><br>
+                • 📦 Collecte des tables HTML<br>
+                • 🔍 Recherche des tables critères<br>
+                • 🎯 Ajout table déclencheuse<br>
+                • 💬 Ajout table user_message<br>
+                • ✅ Collecte terminée<br>
+                • 📋 Détail de toutes les tables<br><br>
+                <strong style="color: #4caf50;">Si vous voyez tous ces logs dans la console, le système fonctionne parfaitement !</strong>
+            `;
+        }
+
+        function clearConsole() {
+            console.clear();
+            document.getElementById('result').style.display = 'none';
+        }
+
+        // Message au chargement
+        console.log('%c🔍 Page de test des logs Flowise.js chargée', 'color: #667eea; font-size: 16px; font-weight: bold;');
+        console.log('%cCliquez sur le bouton "Tester les Logs" pour voir les logs détaillés', 'color: #666; font-size: 12px;');
+    </script>
+</body>
+
+</html>

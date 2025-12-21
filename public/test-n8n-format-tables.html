@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Format Tables n8n</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .format-example {
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .format-example h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        pre {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .indicator.ok {
+            background: #28a745;
+            color: white;
+        }
+        .indicator.bad {
+            background: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📋 Formats de Réponse n8n Acceptés</h1>
+        
+        <p>Voici les différents formats de réponse que Flowise.js peut traiter :</p>
+
+        <!-- Format 1 -->
+        <div class="format-example success">
+            <h3>✅ Format 1: Standard (Object avec output)</h3>
+            <div class="indicator ok">RECOMMANDÉ</div>
+            <pre>{
+  "output": "# Résultat\n\n| Colonne 1 | Colonne 2 |\n|-----------|----------|\n| Valeur A | Valeur B |"
+}</pre>
+            <p><strong>Configuration n8n:</strong></p>
+            <pre>// Dans le Code Node
+return {
+  json: {
+    output: "votre markdown avec tables"
+  }
+};</pre>
+        </div>
+
+        <!-- Format 2 -->
+        <div class="format-example success">
+            <h3>✅ Format 2: Array avec output</h3>
+            <div class="indicator ok">ACCEPTÉ</div>
+            <pre>[
+  {
+    "output": "# Résultat\n\n| Colonne 1 | Colonne 2 |\n|-----------|----------|\n| Valeur A | Valeur B |"
+  }
+]</pre>
+            <p><strong>Configuration n8n:</strong></p>
+            <pre>// Dans le Code Node
+return [
+  {
+    json: {
+      output: "votre markdown avec tables"
+    }
+  }
+];</pre>
+        </div>
+
+        <!-- Format 3 -->
+        <div class="format-example success">
+            <h3>✅ Format 3: Programme de travail (data)</h3>
+            <div class="indicator ok">ACCEPTÉ</div>
+            <pre>[
+  {
+    "data": {
+      "etape_mission_Synthese": [
+        {
+          "Table_1": {
+            "titre": "Mon titre",
+            "description": "Ma description"
+          }
+        },
+        {
+          "Table_2": [
+            {
+              "colonne1": "valeur1",
+              "colonne2": "valeur2"
+            }
+          ]
+        }
+      ]
+    }
+  }
+]</pre>
+            <p><strong>Note:</strong> Ce format est automatiquement converti en markdown</p>
+        </div>
+
+        <!-- Format 4 -->
+        <div class="format-example success">
+            <h3>✅ Format 4: Tables array</h3>
+            <div class="indicator ok">ACCEPTÉ</div>
+            <pre>{
+  "tables": [
+    {
+      "markdown": "| Col1 | Col2 |\n|------|------|\n| A | B |"
+    },
+    {
+      "markdown": "| Col3 | Col4 |\n|------|------|\n| C | D |"
+    }
+  ]
+}</pre>
+        </div>
+
+        <!-- Format Invalide 1 -->
+        <div class="format-example error">
+            <h3>❌ Format Invalide 1: Réponse vide</h3>
+            <div class="indicator bad">ERREUR</div>
+            <pre>(rien - 0 caractères)</pre>
+            <p><strong>Erreur:</strong> "Réponse n8n vide - vérifiez votre workflow n8n"</p>
+            <p><strong>Cause:</strong> Pas de node "Respond to Webhook" dans le workflow</p>
+            <p><strong>Solution:</strong> Ajoutez un node "Respond to Webhook" à la fin</p>
+        </div>
+
+        <!-- Format Invalide 2 -->
+        <div class="format-example error">
+            <h3>❌ Format Invalide 2: Texte brut (pas JSON)</h3>
+            <div class="indicator bad">ERREUR</div>
+            <pre>Ceci est du texte brut, pas du JSON</pre>
+            <p><strong>Erreur:</strong> "Réponse n8n invalide (pas du JSON)"</p>
+            <p><strong>Cause:</strong> Le node retourne du texte au lieu de JSON</p>
+            <p><strong>Solution:</strong> Configurez le node pour retourner du JSON</p>
+        </div>
+
+        <!-- Format Invalide 3 -->
+        <div class="format-example error">
+            <h3>❌ Format Invalide 3: JSON sans output/data/tables</h3>
+            <div class="indicator bad">ERREUR</div>
+            <pre>{
+  "result": "quelque chose",
+  "status": "ok"
+}</pre>
+            <p><strong>Erreur:</strong> "Format de réponse non reconnu"</p>
+            <p><strong>Cause:</strong> Pas de clé "output", "data" ou "tables"</p>
+            <p><strong>Solution:</strong> Utilisez une des structures acceptées ci-dessus</p>
+        </div>
+
+        <hr style="margin: 30px 0;">
+
+        <h2>🔧 Workflow n8n Minimal</h2>
+        <p>Voici un workflow minimal qui fonctionne :</p>
+        
+        <div class="format-example success">
+            <h3>Structure du Workflow</h3>
+            <pre>1. Webhook (POST /webhook/htlm_processor)
+   ↓
+2. Code Node
+   ↓
+3. Respond to Webhook</pre>
+
+            <h3>Code Node</h3>
+            <pre>// Récupérer les données
+const input = $input.first().json.question;
+
+// Traiter et créer le markdown
+const result = `# Résultat du Traitement
+
+| Colonne 1 | Colonne 2 |
+|-----------|-----------|
+| Valeur A  | Valeur B  |
+| Valeur C  | Valeur D  |`;
+
+// Retourner au format attendu
+return {
+  json: {
+    output: result
+  }
+};</pre>
+
+            <h3>Respond to Webhook</h3>
+            <pre>Response Mode: Using 'Respond to Webhook' Node
+Response Body: {{ $json }}</pre>
+        </div>
+
+        <hr style="margin: 30px 0;">
+
+        <h2>🧪 Tester Votre Workflow</h2>
+        <p>Utilisez <code>public/test-n8n-connection.html</code> pour tester votre workflow avant de l'utiliser dans l'application.</p>
+        
+        <p><strong>Indicateurs clés à vérifier :</strong></p>
+        <ul>
+            <li>📏 <strong>Taille reçue:</strong> Doit être > 0 caractères</li>
+            <li>✅ <strong>JSON valide:</strong> Doit être parsable</li>
+            <li>🔑 <strong>Clés:</strong> Doit contenir "output", "data" ou "tables"</li>
+        </ul>
+
+        <hr style="margin: 30px 0;">
+
+        <h2>📚 Documentation</h2>
+        <ul>
+            <li><code>TESTEZ_MAINTENANT_N8N.txt</code> - Guide de test rapide</li>
+            <li><code>GUIDE_LOGS_N8N.md</code> - Interprétation des logs</li>
+            <li><code>COMMANDES_RAPIDES_N8N.txt</code> - Commandes à copier-coller</li>
+            <li><code>FIX_N8N_REPONSE_VIDE_FINAL.md</code> - Guide de résolution complet</li>
+        </ul>
+    </div>
+</body>
+</html>

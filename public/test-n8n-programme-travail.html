@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test N8N - Programme de Travail</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e0e0e0;
+        }
+
+        .test-section {
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            color: #4CAF50;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        .log-output {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #666;
+            padding-left: 10px;
+        }
+
+        .log-success {
+            border-left-color: #4CAF50;
+            color: #4CAF50;
+        }
+
+        .log-error {
+            border-left-color: #f44336;
+            color: #f44336;
+        }
+
+        .log-warning {
+            border-left-color: #ff9800;
+            color: #ff9800;
+        }
+
+        .log-info {
+            border-left-color: #2196F3;
+            color: #2196F3;
+        }
+
+        .response-preview {
+            background: #1a1a1a;
+            border: 1px solid #4CAF50;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status-success {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .status-error {
+            background: #f44336;
+            color: white;
+        }
+
+        .status-pending {
+            background: #ff9800;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 Test N8N - Programme de Travail</h1>
+
+    <div class="test-section">
+        <h2>1. Test de Connexion N8N</h2>
+        <p>Vérifiez que l'endpoint n8n est accessible</p>
+        <button onclick="testN8nConnection()">Tester la Connexion</button>
+        <div id="connection-log" class="log-output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test avec Données "Programme de Travail"</h2>
+        <p>Envoi de données simulées pour le workflow "Programme de travail"</p>
+        <button onclick="testProgrammeTravail()">Envoyer Test Programme</button>
+        <div id="programme-log" class="log-output"></div>
+        <div id="programme-response" class="response-preview" style="display:none;">
+            <h3>Réponse Brute:</h3>
+            <pre id="programme-response-content"></pre>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test de Normalisation</h2>
+        <p>Test de la fonction normalizeN8nResponse avec différents formats</p>
+        <button onclick="testNormalization()">Tester Normalisation</button>
+        <div id="normalize-log" class="log-output"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Logs Console</h2>
+        <p>Tous les logs de la console sont capturés ici</p>
+        <button onclick="clearConsoleLogs()">Effacer les Logs</button>
+        <div id="console-log" class="log-output"></div>
+    </div>
+
+    <script>
+        const N8N_ENDPOINT = "https://xomava4845.app.n8n.cloud/webhook/htlm_processor";
+
+        // Capture des logs console
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        const originalConsoleWarn = console.warn;
+
+        function addConsoleLog(message, type = 'info') {
+            const consoleLog = document.getElementById('console-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            consoleLog.appendChild(entry);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        console.log = function (...args) {
+            originalConsoleLog.apply(console, args);
+            addConsoleLog(args.join(' '), 'info');
+        };
+
+        console.error = function (...args) {
+            originalConsoleError.apply(console, args);
+            addConsoleLog(args.join(' '), 'error');
+        };
+
+        console.warn = function (...args) {
+            originalConsoleWarn.apply(console, args);
+            addConsoleLog(args.join(' '), 'warning');
+        };
+
+        function clearConsoleLogs() {
+            document.getElementById('console-log').innerHTML = '';
+        }
+
+        function addLog(elementId, message, type = 'info') {
+            const logDiv = document.getElementById(elementId);
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function testN8nConnection() {
+            const logId = 'connection-log';
+            document.getElementById(logId).innerHTML = '';
+            addLog(logId, '🔄 Test de connexion en cours...', 'info');
+
+            try {
+                const testPayload = {
+                    question: '<table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg"><thead><tr><th>Test</th></tr></thead><tbody><tr><td>Connexion</td></tr></tbody></table>'
+                };
+
+                addLog(logId, `📡 Envoi vers: ${N8N_ENDPOINT}`, 'info');
+                addLog(logId, `📦 Payload: ${JSON.stringify(testPayload).substring(0, 100)}...`, 'info');
+
+                const response = await fetch(N8N_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(testPayload)
+                });
+
+                addLog(logId, `📊 Status HTTP: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                addLog(logId, `📋 Headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`, 'info');
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    addLog(logId, `❌ Erreur: ${errorText}`, 'error');
+                    return;
+                }
+
+                const data = await response.json();
+                addLog(logId, `✅ Connexion réussie!`, 'success');
+                addLog(logId, `📦 Type de réponse: ${Array.isArray(data) ? 'Array' : typeof data}`, 'info');
+                addLog(logId, `📦 Réponse: ${JSON.stringify(data, null, 2).substring(0, 500)}...`, 'success');
+
+            } catch (error) {
+                addLog(logId, `❌ Erreur: ${error.message}`, 'error');
+                addLog(logId, `📍 Stack: ${error.stack}`, 'error');
+            }
+        }
+
+        async function testProgrammeTravail() {
+            const logId = 'programme-log';
+            document.getElementById(logId).innerHTML = '';
+            addLog(logId, '🔄 Test Programme de Travail en cours...', 'info');
+
+            try {
+                // Simulation de données "Programme de travail"
+                const testHTML = `
+                    <table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <thead>
+                            <tr>
+                                <th>Rubrique</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Etape</td>
+                                <td>Programme de travail</td>
+                            </tr>
+                            <tr>
+                                <td>reference</td>
+                                <td>Prg-001</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+                        <thead>
+                            <tr>
+                                <th>Flowise</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Programme de travail</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                `;
+
+                const payload = { question: testHTML };
+
+                addLog(logId, `📡 Envoi vers: ${N8N_ENDPOINT}`, 'info');
+                addLog(logId, `📦 Taille du payload: ${JSON.stringify(payload).length} caractères`, 'info');
+
+                const response = await fetch(N8N_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                addLog(logId, `📊 Status HTTP: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    addLog(logId, `❌ Erreur HTTP: ${errorText}`, 'error');
+                    return;
+                }
+
+                const data = await response.json();
+                addLog(logId, `✅ Réponse reçue!`, 'success');
+                addLog(logId, `📦 Type: ${Array.isArray(data) ? `Array[${data.length}]` : typeof data}`, 'info');
+
+                // Afficher la structure
+                if (Array.isArray(data) && data.length > 0) {
+                    const firstItem = data[0];
+                    addLog(logId, `📦 Premier élément - Type: ${typeof firstItem}`, 'info');
+                    addLog(logId, `📦 Premier élément - Clés: ${Object.keys(firstItem).join(', ')}`, 'info');
+
+                    if (firstItem.response) {
+                        addLog(logId, `📦 firstItem.response - Clés: ${Object.keys(firstItem.response).join(', ')}`, 'info');
+
+                        if (firstItem.response.body) {
+                            const body = firstItem.response.body;
+                            addLog(logId, `📦 Body - Type: ${Array.isArray(body) ? `Array[${body.length}]` : typeof body}`, 'info');
+
+                            if (Array.isArray(body) && body.length > 0) {
+                                addLog(logId, `📦 Body[0] - Clés: ${Object.keys(body[0]).join(', ')}`, 'info');
+                                addLog(logId, `📦 Body[0].output existe: ${'output' in body[0]}`, body[0].output ? 'success' : 'error');
+                                addLog(logId, `📦 Body[0].output - Longueur: ${body[0].output?.length || 0}`, 'info');
+                                addLog(logId, `📦 Body[0].status: ${body[0].status}`, 'info');
+                            }
+                        }
+                    }
+                }
+
+                // Afficher la réponse complète
+                document.getElementById('programme-response').style.display = 'block';
+                document.getElementById('programme-response-content').textContent = JSON.stringify(data, null, 2);
+
+                addLog(logId, `✅ Test terminé avec succès!`, 'success');
+
+            } catch (error) {
+                addLog(logId, `❌ Erreur: ${error.message}`, 'error');
+                addLog(logId, `📍 Stack: ${error.stack}`, 'error');
+            }
+        }
+
+        function testNormalization() {
+            const logId = 'normalize-log';
+            document.getElementById(logId).innerHTML = '';
+            addLog(logId, '🔄 Test de normalisation...', 'info');
+
+            // Test avec le format webhook htlm_processor
+            const testResponse = [{
+                "response": {
+                    "body": [{
+                        "output": "| Rubrique | Description |\n|----------|-------------|\n| Etape | Programme |\n| reference | Prg-001 |",
+                        "status": "success",
+                        "timestamp": "2025-12-03T21:11:47.130Z",
+                        "contentLength": 100
+                    }],
+                    "headers": {
+                        "content-type": "application/json"
+                    },
+                    "statusCode": 200
+                }
+            }];
+
+            addLog(logId, `📦 Test avec format webhook htlm_processor`, 'info');
+            addLog(logId, `📦 Structure: ${JSON.stringify(testResponse, null, 2).substring(0, 300)}...`, 'info');
+
+            try {
+                // Simuler la normalisation
+                const firstItem = testResponse[0];
+                const body = firstItem.response.body;
+                const output = body[0].output;
+
+                addLog(logId, `✅ Output extrait: ${output.length} caractères`, 'success');
+                addLog(logId, `📋 Aperçu: ${output.substring(0, 100)}...`, 'success');
+                addLog(logId, `📊 Status: ${body[0].status}`, 'success');
+
+                addLog(logId, `✅ Normalisation réussie!`, 'success');
+
+            } catch (error) {
+                addLog(logId, `❌ Erreur: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-test au chargement
+        console.log('🚀 Page de test chargée');
+        console.log('💡 Cliquez sur les boutons pour lancer les tests');
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Envoi N8N - Diagnostic Complet</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button.secondary {
+            background: #2196F3;
+        }
+
+        button.secondary:hover {
+            background: #0b7dda;
+        }
+
+        #console {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .log-success {
+            color: #4CAF50;
+        }
+
+        .log-error {
+            color: #f44336;
+        }
+
+        .log-info {
+            color: #2196F3;
+        }
+
+        .log-warning {
+            color: #ff9800;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 150px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔍 Test Envoi N8N - Diagnostic Complet</h1>
+
+    <div class="section">
+        <h2>📋 Configuration</h2>
+        <label>Endpoint N8N:</label>
+        <input type="text" id="endpoint" value="http://localhost:5678/webhook/htlm_processor">
+
+        <div id="status" class="status info">
+            ⏳ En attente de test...
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🧪 Tests Rapides</h2>
+        <button onclick="testConnexion()">1️⃣ Tester la Connexion</button>
+        <button onclick="testEnvoiSimple()" class="secondary">2️⃣ Envoi Simple</button>
+        <button onclick="testEnvoiComplet()" class="secondary">3️⃣ Envoi Complet (avec tables)</button>
+        <button onclick="clearConsole()">🗑️ Effacer Console</button>
+    </div>
+
+    <div class="section">
+        <h2>📝 Test Personnalisé</h2>
+        <label>HTML à envoyer:</label>
+        <textarea id="customHTML" placeholder="Collez votre HTML ici..."></textarea>
+        <button onclick="testEnvoiPersonnalise()">📤 Envoyer HTML Personnalisé</button>
+    </div>
+
+    <div class="section">
+        <h2>📊 Console de Diagnostic</h2>
+        <div id="console"></div>
+    </div>
+
+    <script>
+        const consoleDiv = document.getElementById('console');
+        const statusDiv = document.getElementById('status');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = `log-${type}`;
+            const icon = {
+                'success': '✅',
+                'error': '❌',
+                'info': 'ℹ️',
+                'warning': '⚠️'
+            }[type] || 'ℹ️';
+
+            consoleDiv.innerHTML += `<span class="${className}">[${timestamp}] ${icon} ${message}</span>\n`;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        function updateStatus(message, type) {
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+
+        function clearConsole() {
+            consoleDiv.innerHTML = '';
+            log('Console effacée', 'info');
+        }
+
+        async function testConnexion() {
+            const endpoint = document.getElementById('endpoint').value;
+            log('🔌 Test de connexion à: ' + endpoint, 'info');
+            updateStatus('⏳ Test de connexion en cours...', 'info');
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        test: true,
+                        message: 'Test de connexion'
+                    })
+                });
+
+                log(`📡 Réponse reçue - Status: ${response.status} ${response.statusText}`, 'success');
+
+                const data = await response.text();
+                log(`📥 Contenu de la réponse (${data.length} caractères):`, 'info');
+                log(data.substring(0, 500), 'info');
+
+                if (response.ok) {
+                    updateStatus('✅ Connexion réussie !', 'success');
+                } else {
+                    updateStatus(`⚠️ Connexion établie mais status: ${response.status}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Erreur de connexion: ${error.message}`, 'error');
+                updateStatus('❌ Échec de connexion - Vérifiez que n8n est démarré', 'error');
+                log('💡 Assurez-vous que n8n est lancé sur localhost:5678', 'warning');
+            }
+        }
+
+        async function testEnvoiSimple() {
+            const endpoint = document.getElementById('endpoint').value;
+            const simpleHTML = '<table><tr><td>Test</td></tr></table>';
+
+            log('📤 Envoi simple d\'une table de test', 'info');
+            updateStatus('⏳ Envoi en cours...', 'info');
+
+            try {
+                const payload = {
+                    question: simpleHTML
+                };
+
+                log('📦 Payload:', 'info');
+                log(JSON.stringify(payload, null, 2), 'info');
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                log(`📡 Réponse - Status: ${response.status}`, response.ok ? 'success' : 'error');
+
+                const data = await response.text();
+                log(`📥 Réponse N8N (${data.length} caractères):`, 'success');
+                log(data, 'info');
+
+                if (response.ok) {
+                    updateStatus('✅ Envoi simple réussi !', 'success');
+                } else {
+                    updateStatus(`⚠️ Envoi effectué mais status: ${response.status}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Erreur: ${error.message}`, 'error');
+                updateStatus('❌ Échec de l\'envoi', 'error');
+            }
+        }
+
+        async function testEnvoiComplet() {
+            const endpoint = document.getElementById('endpoint').value;
+
+            // HTML complet similaire à ce que Flowise.js envoie
+            const completHTML = `<table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg mb-6">
+<thead>
+<tr>
+<th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-left font-semibold">Propriété</th>
+<th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-left font-semibold">Valeur</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 text-sm font-bold">Etape</td>
+<td class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 text-sm">Programme</td>
+</tr>
+</tbody>
+</table>
+
+<table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg mb-2">
+<thead>
+<tr>
+<th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-left font-semibold">Flowise</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 text-sm">CIA</td>
+</tr>
+</tbody>
+</table>
+
+<table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+<thead>
+<tr>
+<th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-left font-semibold">user_message</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 text-sm">
+[Command] = Programme de travail<br>
+[Processus] = Sécurité trésorerie<br>
+[Nb de lignes] = 25
+</td>
+</tr>
+</tbody>
+</table>`;
+
+            log('📤 Envoi complet avec 3 tables (comme Flowise.js)', 'info');
+            log(`📏 Taille HTML: ${completHTML.length} caractères`, 'info');
+            updateStatus('⏳ Envoi complet en cours...', 'info');
+
+            try {
+                const payload = {
+                    question: completHTML
+                };
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                log(`📡 Réponse - Status: ${response.status}`, response.ok ? 'success' : 'error');
+
+                const data = await response.text();
+                log(`📥 Réponse N8N (${data.length} caractères):`, 'success');
+                log(data.substring(0, 1000), 'info');
+
+                if (response.ok) {
+                    updateStatus('✅ Envoi complet réussi ! N8N a traité les données.', 'success');
+                    log('🎉 Les données ont été envoyées et traitées avec succès !', 'success');
+                } else {
+                    updateStatus(`⚠️ Envoi effectué mais status: ${response.status}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Erreur: ${error.message}`, 'error');
+                updateStatus('❌ Échec de l\'envoi complet', 'error');
+            }
+        }
+
+        async function testEnvoiPersonnalise() {
+            const endpoint = document.getElementById('endpoint').value;
+            const customHTML = document.getElementById('customHTML').value;
+
+            if (!customHTML.trim()) {
+                log('⚠️ Veuillez entrer du HTML à envoyer', 'warning');
+                return;
+            }
+
+            log('📤 Envoi personnalisé', 'info');
+            log(`📏 Taille: ${customHTML.length} caractères`, 'info');
+            updateStatus('⏳ Envoi personnalisé en cours...', 'info');
+
+            try {
+                const payload = {
+                    question: customHTML
+                };
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                log(`📡 Réponse - Status: ${response.status}`, response.ok ? 'success' : 'error');
+
+                const data = await response.text();
+                log(`📥 Réponse N8N:`, 'success');
+                log(data, 'info');
+
+                if (response.ok) {
+                    updateStatus('✅ Envoi personnalisé réussi !', 'success');
+                } else {
+                    updateStatus(`⚠️ Status: ${response.status}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Erreur: ${error.message}`, 'error');
+                updateStatus('❌ Échec de l\'envoi', 'error');
+            }
+        }
+
+        // Log initial
+        log('🚀 Page de test chargée', 'success');
+        log('💡 Cliquez sur "Tester la Connexion" pour commencer', 'info');
+    </script>
+</body>
+
+</html>

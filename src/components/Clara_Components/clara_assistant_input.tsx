@@ -98,6 +98,9 @@ import { claraAttachmentService } from '../../services/claraAttachmentService';
 // Import image generation widget
 import ChatImageGenWidget from './ChatImageGenWidget';
 
+// Import Demarrer Menu component
+import DemarrerMenu from './DemarrerMenu';
+
 /**
  * Custom Tooltip Component
  */
@@ -4115,7 +4118,7 @@ You can right-click on the image to save it or use it in your projects.`;
                           onPreloadModel?.();
                         }
                       }}
-                      placeholder="Ask me anything..."
+                      placeholder="/Demarrer E-audit pro"
                       className="flex-1 border-0 outline-none focus:outline-none focus:ring-0 resize-none bg-transparent text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 leading-relaxed"
                       style={{
                         height: 'auto',
@@ -4192,6 +4195,40 @@ You can right-click on the image to save it or use it in your projects.`;
                       </Tooltip>
                     </div>
 
+                    {/* Menu Démarrer - Automatisation des prompts E-audit */}
+                    <DemarrerMenu 
+                      onInsertCommand={(command) => {
+                        console.log('[DemarrerMenu] Inserting command:', command);
+                        
+                        // Mettre à jour l'état React
+                        setInput(command);
+                        
+                        // Forcer la mise à jour du textarea directement
+                        if (textareaRef.current) {
+                          textareaRef.current.value = command;
+                        }
+                        
+                        // Focus et ajustement de la hauteur après un court délai
+                        requestAnimationFrame(() => {
+                          if (textareaRef.current) {
+                            // Focus sur le textarea
+                            textareaRef.current.focus();
+                            
+                            // Placer le curseur à la fin du texte
+                            textareaRef.current.selectionStart = command.length;
+                            textareaRef.current.selectionEnd = command.length;
+                            
+                            // Ajuster la hauteur du textarea
+                            textareaRef.current.style.height = 'auto';
+                            textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
+                            
+                            console.log('[DemarrerMenu] Command inserted successfully, textarea value:', textareaRef.current.value);
+                          }
+                        });
+                      }}
+                      disabled={isLoading}
+                    />
+
                     {/* Voice Input - Mini zone ovale */}
                     <Tooltip content="Voice input" position="top">
                       <button
@@ -4207,7 +4244,15 @@ You can right-click on the image to save it or use it in your projects.`;
                       </button>
                     </Tooltip>
 
-                    {/* Mode Toggle - Mini zone ovale */}
+                    {/* ============================================================
+                        MENU LLM MASQUÉ - Utilisation endpoint n8n
+                        Ces sélecteurs sont masqués car l'application utilise 
+                        maintenant un endpoint n8n pour les requêtes LLM.
+                        Pour réactiver, décommenter les sections ci-dessous.
+                    ============================================================ */}
+                    
+                    {/* Mode Toggle - Mini zone ovale - MASQUÉ */}
+                    {/* 
                     <div className="flex items-center bg-gray-100/80 dark:bg-gray-800/80 rounded-full px-1 py-1">
                       <Tooltip 
                         content={isStreamingMode ? "Switch to Tools Mode - Ctrl+M" : "Switch to Streaming Mode - Ctrl+M"} 
@@ -4241,8 +4286,10 @@ You can right-click on the image to save it or use it in your projects.`;
                         </button>
                       </Tooltip>
                     </div>
+                    */}
 
-                    {/* Model Selection - Mini zone ovale */}
+                    {/* Model Selection - Mini zone ovale - MASQUÉ */}
+                    {/*
                     <div className="relative">
                       {currentAIConfig.features.autoModelSelection ? (
                         <Tooltip 
@@ -4300,8 +4347,10 @@ You can right-click on the image to save it or use it in your projects.`;
                         />
                       )}
                     </div>
+                    */}
 
-                    {/* Settings - Mini zone ovale */}
+                    {/* Settings - Mini zone ovale - MASQUÉ */}
+                    {/*
                     <Tooltip content="Advanced settings" position="top">
                       <button
                         onClick={() => onAdvancedOptionsToggle?.(!showAdvancedOptionsPanel)}
@@ -4314,6 +4363,7 @@ You can right-click on the image to save it or use it in your projects.`;
                         <Settings className="w-4 h-4" />
                       </button>
                     </Tooltip>
+                    */}
                   </div>
                 </div>
               </div>

@@ -1,57 +1,51 @@
-╔══════════════════════════════════════════════════════════════════╗
-║                                                                  ║
-║           🚀 DÉPLOIEMENT RAPIDE - 3 COMMANDES 🚀                 ║
-║                                                                  ║
-╚══════════════════════════════════════════════════════════════════╝
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║              🚀 DÉMARRAGE E-AUDIT EN 3 COMMANDES                         ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
 
 
-✅ LE PROBLÈME EST DÉJÀ RÉSOLU !
-═══════════════════════════════════════════════════════════════════
+DEPUIS WSL2 UBUNTU:
+═══════════════════════════════════════════════════════════════════════════
 
-Le .gitignore a été corrigé pour inclure src/assets/logo.png
-Vous pouvez déployer immédiatement.
+1️⃣  wsl
 
+2️⃣  cd /mnt/d/ClaraVerse-v\ firebase
 
-🚀 MÉTHODE RAPIDE (3 COMMANDES)
-═══════════════════════════════════════════════════════════════════
-
-Ouvrez un terminal (CMD ou PowerShell) et tapez :
+3️⃣  docker compose up -d
 
 
-1️⃣  git add .
+DEPUIS WINDOWS (1 COMMANDE):
+═══════════════════════════════════════════════════════════════════════════
+
+wsl bash -c "cd /mnt/d/ClaraVerse-v\ firebase && docker compose up -d"
 
 
-2️⃣  git commit -m "Mise a jour ClaraVerse"
+OU DOUBLE-CLIC:
+═══════════════════════════════════════════════════════════════════════════
+
+📁 start-containers.bat
 
 
-3️⃣  git push origin main
+ACCÈS:
+═══════════════════════════════════════════════════════════════════════════
+
+Frontend: http://localhost:8080
+Backend:  http://localhost:5000
 
 
-C'EST TOUT ! ✅
+ARRÊT:
+═══════════════════════════════════════════════════════════════════════════
+
+docker compose down
+
+OU
+
+📁 stop-containers.bat
 
 
-📝 SI VOUS AVEZ UNE ERREUR
-═══════════════════════════════════════════════════════════════════
-
-Si "git push origin main" échoue, essayez :
-
-git push origin master
-
-Ou forcez le push (écrase l'historique) :
-
-git push -f origin main
-
-
-🎯 APRÈS LE PUSH
-═══════════════════════════════════════════════════════════════════
-
-1. Allez sur : https://github.com/sekadalle2024/claraverse_back-up_V2
-
-2. Vérifiez que src/assets/logo.png est présent
-
-3. Testez le build sur Firebase Studio
-
-
-═══════════════════════════════════════════════════════════════════
-                    DÉPLOYEZ MAINTENANT ! 🚀
-═══════════════════════════════════════════════════════════════════
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║                    ✅ C'EST TOUT! SIMPLE ET RAPIDE                       ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝

@@ -393,7 +393,8 @@ const MessageMetadata: React.FC<{
     <div className="mt-2">
       {/* Main metadata row */}
       <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-        {message.metadata.model && (
+        {/* Masqué selon les spécifications Grok - Référence du système LLM */}
+        {false && message.metadata.model && (
           <span className="px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-gray-600 dark:text-gray-400">
             {getDisplayModelName(message.metadata.model)}
           </span>
@@ -416,15 +417,15 @@ const MessageMetadata: React.FC<{
           </button>
         )}
         
-        {/* Timing information */}
-        {message.metadata.timings?.predicted_per_second && (
+        {/* Timing information - Masqué selon les spécifications Grok */}
+        {false && message.metadata.timings?.predicted_per_second && (
           <span className="flex items-center gap-1 text-green-600 dark:text-green-400">
             <Clock className="w-3 h-3" />
             {formatTokensPerSecond(message.metadata.timings.predicted_per_second)} tok/s
           </span>
         )}
 
-        {message.metadata.processingTime && (
+        {false && message.metadata.processingTime && (
           <span className="flex items-center gap-1">
             <Clock className="w-3 h-3" />
             {message.metadata.processingTime}ms

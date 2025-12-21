@@ -1,516 +1,132 @@
-import { useState, useEffect } from "react";
 import {
   Home,
+  MessageSquare,
+  FolderOpen,
+  Database,
   Bot,
+  BookOpen,
+  Code,
+  Image,
   Settings,
   HelpCircle,
-  ImageIcon,
-  Network,
-  BrainCircuit,
-  Download,
   X,
-  Zap,
-  Code2,
-  BookOpen,
 } from "lucide-react";
 import logo from "../assets/logo.png";
-
-// interface HuggingFaceModel {
-//   id: string;
-//   name: string;
-//   downloads: number;
-//   likes: number;
-//   tags: string[];
-//   description: string;
-//   author: string;
-//   files: Array<{ rfilename: string; size?: number }>;
-// }
-
-// interface LocalModel {
-//   name: string;
-//   file: string;
-//   path: string;
-//   size: number;
-//   source: string;
-//   lastModified: Date;
-// }
 
 interface SidebarProps {
   activePage: string;
   onPageChange: (page: string) => void;
   alphaFeaturesEnabled?: boolean;
   showChatHistoryIndicator?: boolean;
-}
-
-interface DownloadProgress {
-  fileName: string;
-  progress: number;
-  downloadedSize: number;
-  totalSize: number;
-}
-
-// Add interface for enhanced service status (matching Settings.tsx)
-interface EnhancedServiceStatus {
-  [serviceName: string]: {
-    state: "running" | "stopped" | "starting" | "error";
-    deploymentMode: "docker" | "manual";
-    restartAttempts: number;
-    lastHealthCheck: number | null;
-    uptime: number;
-    serviceUrl: string | null;
-    isManual: boolean;
-    canRestart: boolean;
-    supportedModes: string[];
-  };
-}
-
-// Add interface for feature configuration
-interface FeatureConfig {
-  comfyUI: boolean;
-  n8n: boolean;
-  ragAndTts: boolean;
-  claraCore: boolean;
+  onLogoClick?: () => void;
+  onClose?: () => void;
 }
 
 interface MenuItem {
-  icon: any;
-  label: string;
   id: string;
-  disabled?: boolean;
-  status?: "ready" | "starting";
+  label: string;
+  icon: React.ReactNode;
+  alpha?: boolean;
 }
 
+const menuItems: MenuItem[] = [
+  { id: "dashboard", label: "Dashboard", icon: <Home className="w-5 h-5" /> },
+  { id: "clara", label: "Chat", icon: <MessageSquare className="w-5 h-5" /> },
+  { id: "dossier", label: "Dossier", icon: <FolderOpen className="w-5 h-5" /> },
+  { id: "database", label: "Database", icon: <Database className="w-5 h-5" /> },
+  { id: "agents", label: "Agents", icon: <Bot className="w-5 h-5" /> },
+  { id: "notebooks", label: "Notebooks", icon: <BookOpen className="w-5 h-5" /> },
+  { id: "lumaui", label: "LumaUI (Beta)", icon: <Code className="w-5 h-5" />, alpha: true },
+  { id: "imagegen", label: "Image Gen", icon: <Image className="w-5 h-5" />, alpha: true },
+];
+
+const bottomMenuItems: MenuItem[] = [
+  { id: "settings", label: "Settings", icon: <Settings className="w-5 h-5" /> },
+  { id: "help", label: "Help", icon: <HelpCircle className="w-5 h-5" /> },
+];
+
+/**
+ * Sidebar - Menu de navigation complet
+ * Affiche le menu avec Dashboard, Chat, Dossier, etc.
+ */
 const Sidebar = ({
-  activePage = "dashboard",
+  activePage,
   onPageChange,
-  alphaFeaturesEnabled = false,
-  showChatHistoryIndicator = false,
+  alphaFeaturesEnabled = true,
+  onLogoClick,
+  onClose,
 }: SidebarProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [activeDownloads, setActiveDownloads] = useState<
-    Record<string, DownloadProgress>
-  >({});
-  const [claraBackgroundActivity, setClaraBackgroundActivity] = useState(false);
-  const [enhancedServiceStatus, setEnhancedServiceStatus] =
-    useState<EnhancedServiceStatus>({});
-  const [featureConfig, setFeatureConfig] = useState<FeatureConfig>({
-    comfyUI: true,
-    n8n: true,
-    ragAndTts: true,
-    claraCore: true,
-  });
-
-  // Load feature configuration on mount
-  useEffect(() => {
-    const loadFeatureConfig = async () => {
-      try {
-        if ((window as any).featureConfig?.getFeatureConfig) {
-          const config = await (window as any).featureConfig.getFeatureConfig();
-          console.log("🔍 Sidebar - Feature config:", config);
-          if (config) {
-            setFeatureConfig(config);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load feature configuration:", error);
-      }
-    };
-
-    loadFeatureConfig();
-  }, []);
-
-  // Listen for Clara background activity changes
-  useEffect(() => {
-    const handleClaraActivity = (event: CustomEvent) => {
-      setClaraBackgroundActivity(event.detail.active);
-    };
-
-    window.addEventListener(
-      "clara-background-activity",
-      handleClaraActivity as EventListener
-    );
-    return () =>
-      window.removeEventListener(
-        "clara-background-activity",
-        handleClaraActivity as EventListener
-      );
-  }, []);
-
-  // Check enhanced service status (matching Settings.tsx approach)
-  useEffect(() => {
-    const loadServiceStatus = async () => {
-      try {
-        if ((window as any).electronAPI?.invoke) {
-          const status = await (window as any).electronAPI.invoke(
-            "service-config:get-enhanced-status"
-          );
-          console.log("🔍 Sidebar - Enhanced service status:", status);
-          setEnhancedServiceStatus(status || {});
-        }
-      } catch (error) {
-        console.error("Failed to load enhanced service status:", error);
-        setEnhancedServiceStatus({});
-      }
-    };
-
-    loadServiceStatus();
-    // Check periodically every 30 seconds
-    const interval = setInterval(loadServiceStatus, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Listen for download progress updates
-  useEffect(() => {
-    if (window.modelManager?.onDownloadProgress) {
-      const unsubscribe = window.modelManager.onDownloadProgress(
-        (progress: DownloadProgress) => {
-          setActiveDownloads((prev) => ({
-            ...prev,
-            [progress.fileName]: progress,
-          }));
-
-          // Remove completed downloads after 3 seconds
-          if (progress.progress >= 100) {
-            setTimeout(() => {
-              setActiveDownloads((prev) => {
-                const updated = { ...prev };
-                delete updated[progress.fileName];
-                return updated;
-              });
-            }, 3000);
-          }
-        }
-      );
-
-      return unsubscribe;
-    }
-  }, []);
-
-  const stopDownload = async (fileName: string) => {
-    if (window.modelManager?.stopDownload) {
-      try {
-        await window.modelManager.stopDownload(fileName);
-        // Remove from active downloads
-        setActiveDownloads((prev) => {
-          const updated = { ...prev };
-          delete updated[fileName];
-          return updated;
-        });
-      } catch (error) {
-        console.error("Error stopping download:", error);
-      }
-    }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 B";
-    const k = 1024;
-    const sizes = ["B", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  };
-
-  // Calculate average progress for the circular indicator
-  const downloadCount = Object.keys(activeDownloads).length;
-  const averageProgress =
-    downloadCount > 0
-      ? Object.values(activeDownloads).reduce(
-          (sum, download) => sum + download.progress,
-          0
-        ) / downloadCount
-      : 0;
-
-  // SVG Circle component for progress indicator
-  const CircularProgress = ({
-    progress,
-    size = 32,
-  }: {
-    progress: number;
-    size?: number;
-  }) => {
-    const radius = (size - 4) / 2;
-    const circumference = radius * 2 * Math.PI;
-    const strokeDasharray = circumference;
-    const strokeDashoffset = circumference - (progress / 100) * circumference;
-
-    return (
-      <div className="relative" style={{ width: size, height: size }}>
-        <svg
-          className="transform -rotate-90 absolute inset-0"
-          width={size}
-          height={size}
-        >
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke="currentColor"
-            strokeWidth="2"
-            fill="transparent"
-            className="text-gray-300 dark:text-gray-600"
-          />
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke="currentColor"
-            strokeWidth="2"
-            fill="transparent"
-            strokeDasharray={strokeDasharray}
-            strokeDashoffset={strokeDashoffset}
-            className="text-sakura-500 transition-all duration-300 ease-in-out"
-            strokeLinecap="round"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-            {downloadCount}
-          </span>
-        </div>
-      </div>
-    );
-  };
-
-  const mainMenuItems: MenuItem[] = [
-    { icon: Home, label: "Dashboard", id: "dashboard", disabled: true },
-    // { icon: Bot, label: 'Chat', id: 'assistant' },
-    { icon: Bot, label: "Chat", id: "clara", disabled: false },
-    { icon: BrainCircuit, label: "Agents", id: "agents", disabled: true },
-    { icon: BookOpen, label: "Notebooks", id: "notebooks", disabled: true },
-    ...(alphaFeaturesEnabled
-      ? [{ icon: Zap, label: "Lumaui (Alpha)", id: "lumaui", disabled: true }]
-      : []),
-    { icon: Code2, label: "LumaUI (Beta)", id: "lumaui-lite", disabled: true },
-    // Only show Image Gen if ComfyUI feature is enabled
-    ...(featureConfig.comfyUI
-      ? [
-          {
-            icon: ImageIcon,
-            label: "Image Gen",
-            id: "image-gen",
-            disabled: true,
-            status:
-              enhancedServiceStatus.comfyui?.state === "running"
-                ? ("ready" as const)
-                : ("starting" as const),
-          },
-        ]
-      : []),
-    // Only show n8n if feature is enabled AND service is running
-    ...(featureConfig.n8n && enhancedServiceStatus.n8n?.state === "running"
-      ? [{ icon: Network, label: "Workflows", id: "n8n", disabled: true }]
-      : []),
-  ];
-
-  // Debug logging for ComfyUI visibility
-  // console.log('🔍 Sidebar Debug:', {
-  //   'featureConfig.comfyUI': featureConfig.comfyUI,
-  //   'enhancedServiceStatus.comfyui': enhancedServiceStatus.comfyui,
-  //   'comfyui state': enhancedServiceStatus.comfyui?.state,
-  //   'final menu items count': mainMenuItems.length,
-  //   'has image-gen': mainMenuItems.some(item => item.id === 'image-gen')
-  // });
-
-  const bottomMenuItems: MenuItem[] = [
-    { icon: Settings, label: "Settings", id: "settings", disabled: true },
-    { icon: HelpCircle, label: "Help", id: "help", disabled: true },
-  ];
+  const filteredMenuItems = alphaFeaturesEnabled
+    ? menuItems
+    : menuItems.filter((item) => !item.alpha);
 
   return (
-    <div
-      className={`glassmorphic h-full flex flex-col gap-6 transition-all duration-300 ease-in-out z-[10000] ${
-        isExpanded ? "w-64" : "w-20"
-      }`}
-      style={{
-        minWidth: isExpanded ? "16rem" : "5rem",
-        maxWidth: isExpanded ? "16rem" : "5rem",
-        // Positionné à GAUCHE maintenant (Grok style)
-        borderRight: "1px solid rgba(229, 231, 235, 0.2)",
-      }}
-      onMouseEnter={() => setIsExpanded(true)}
-      onMouseLeave={() => setIsExpanded(false)}
-    >
-      <div
-        className={`flex items-center py-4 ${
-          isExpanded ? "px-4 justify-start gap-3" : "justify-center"
-        }`}
-      >
+    <div className="main-nav-menu w-64 h-full flex flex-col z-[10000] bg-[#fcfcfc] dark:bg-[#111827] border-r border-gray-200 dark:border-gray-700" style={{ backgroundColor: 'var(--sidebar-bg, #fcfcfc)' }}>
+      {/* Header avec logo et bouton fermer */}
+      <div className="h-16 px-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-700">
         <button
-          onClick={() => onPageChange("dashboard")}
+          onClick={() => onLogoClick?.()}
           className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+          title="Fermer le menu"
         >
-          <img src={logo} alt="E-audit Logo" className="w-8 h-8 flex-shrink-0" />
-          <h1
-            className={`text-2xl font-semibold text-gray-800 dark:text-gray-100 whitespace-nowrap overflow-hidden transition-all duration-300 ${
-              isExpanded ? "opacity-100 w-auto" : "opacity-0 w-0"
-            }`}
-          >
-            E-audit
-          </h1>
+          <img src={logo} alt="E-audit Logo" className="w-8 h-8" />
+          <span className="text-gray-900 dark:text-gray-100 font-semibold text-lg">E-audit</span>
         </button>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+            title="Fermer"
+          >
+            <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+          </button>
+        )}
       </div>
 
-      <nav className="flex-1 flex flex-col justify-between">
-        <ul className="space-y-2 px-2">
-          {mainMenuItems.map((item) => (
+      {/* Menu principal */}
+      <nav className="flex-1 py-4 overflow-y-auto">
+        <ul className="space-y-1 px-2">
+          {filteredMenuItems.map((item) => (
             <li key={item.id}>
               <button
-                onClick={() => !item.disabled && onPageChange(item.id)}
-                data-page={item.id}
-                disabled={item.disabled}
-                className={`w-full flex items-center rounded-lg transition-colors h-10 relative ${
-                  isExpanded
-                    ? "px-4 justify-start gap-3"
-                    : "justify-center px-0"
-                } ${
-                  item.disabled
-                    ? "cursor-not-allowed text-gray-700 dark:text-gray-300"
-                    : activePage === item.id
-                    ? "bg-sakura-100 text-sakura-500 dark:bg-sakura-100/10"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-sakura-50 hover:text-sakura-500 dark:hover:bg-sakura-100/10"
+                onClick={() => onPageChange(item.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                  activePage === item.id
+                    ? "bg-sakura-500/20 text-sakura-500"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800"
                 }`}
               >
-                <div className="relative">
-                  <item.icon className="w-5 h-5 flex-shrink-0" />
-                  {/* Chat history indicator - Grok style */}
-                  {item.id === "clara" && showChatHistoryIndicator && (
-                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></div>
-                  )}
-                  {/* Background activity indicator for Clara */}
-                  {item.id === "clara" && claraBackgroundActivity && (
-                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  )}
-                  {/* ComfyUI status indicator */}
-                  {item.id === "image-gen" && item.status === "starting" && (
-                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></div>
-                  )}
-                  {item.id === "image-gen" && item.status === "ready" && (
-                    <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full"></div>
-                  )}
-                </div>
-                <span
-                  className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${
-                    isExpanded ? "opacity-100 w-auto ml-3" : "opacity-0 w-0"
-                  }`}
-                >
-                  {item.label}
-                  {/* Background activity text indicator when expanded */}
-                  {item.id === "clara" &&
-                    claraBackgroundActivity &&
-                    isExpanded && (
-                      <span className="ml-2 text-xs text-green-500 font-medium">
-                        ●
-                      </span>
-                    )}
-                  {/* ComfyUI status text when expanded */}
-                  {item.id === "image-gen" && isExpanded && (
-                    <span
-                      className={`ml-2 text-xs font-medium ${
-                        item.status === "ready"
-                          ? "text-green-500"
-                          : "text-yellow-500"
-                      }`}
-                    >
-                      {item.status === "ready" ? "●" : "○"}
-                    </span>
-                  )}
-                </span>
+                {item.icon}
+                <span className="text-sm font-medium">{item.label}</span>
+                {item.alpha && (
+                  <span className="ml-auto w-2 h-2 rounded-full bg-yellow-500" title="Alpha feature" />
+                )}
               </button>
             </li>
           ))}
         </ul>
-
-        <div className="flex flex-col">
-          {/* Download Progress Indicator - positioned above bottom menu */}
-          {downloadCount > 0 && (
-            <div className="px-2 mb-4">
-              {isExpanded ? (
-                // Expanded view - full details with individual file progress
-                <div className="glassmorphic p-3 rounded-lg max-h-64 overflow-y-auto">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Download className="w-4 h-4 text-sakura-500" />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Downloading {downloadCount} file
-                      {downloadCount > 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {Object.values(activeDownloads).map((download) => (
-                      <div
-                        key={download.fileName}
-                        className="bg-white/20 dark:bg-gray-800/20 rounded p-2"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="text-xs text-gray-600 dark:text-gray-400 truncate flex-1 mr-2">
-                            {download.fileName}
-                          </div>
-                          <button
-                            onClick={() => stopDownload(download.fileName)}
-                            className="text-red-500 hover:text-red-700 transition-colors"
-                            title="Stop download"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-1">
-                          <div
-                            className="bg-sakura-500 h-1.5 rounded-full transition-all duration-300"
-                            style={{ width: `${download.progress}%` }}
-                          ></div>
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 flex justify-between">
-                          <span>{download.progress.toFixed(1)}%</span>
-                          <span>
-                            {formatFileSize(download.downloadedSize)} /{" "}
-                            {formatFileSize(download.totalSize)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                // Collapsed view - circular progress with file count
-                <div className="glassmorphic p-2 rounded-lg flex items-center justify-center">
-                  <CircularProgress progress={averageProgress} size={32} />
-                </div>
-              )}
-            </div>
-          )}
-
-          <ul className="space-y-2 px-2 mb-4">
-            {bottomMenuItems.map((item) => (
-              <li key={item.id}>
-                <button
-                  onClick={() => !item.disabled && onPageChange(item.id)}
-                  data-page={item.id}
-                  disabled={item.disabled}
-                  className={`w-full flex items-center rounded-lg transition-colors h-10 ${
-                    isExpanded
-                      ? "px-4 justify-start gap-3"
-                      : "justify-center px-0"
-                  } ${
-                    item.disabled
-                      ? "cursor-not-allowed text-gray-700 dark:text-gray-300"
-                      : activePage === item.id
-                      ? "bg-sakura-100 text-sakura-500 dark:bg-sakura-100/10"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-sakura-50 hover:text-sakura-500 dark:hover:bg-sakura-100/10"
-                  }`}
-                >
-                  <item.icon className="w-5 h-5 flex-shrink-0" />
-                  <span
-                    className={`whitespace-nowrap overflow-hidden transition-all duration-300 ${
-                      isExpanded ? "opacity-100 w-auto ml-3" : "opacity-0 w-0"
-                    }`}
-                  >
-                    {item.label}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
       </nav>
+
+      {/* Menu du bas */}
+      <div className="border-t border-gray-200 dark:border-gray-700 py-4">
+        <ul className="space-y-1 px-2">
+          {bottomMenuItems.map((item) => (
+            <li key={item.id}>
+              <button
+                onClick={() => onPageChange(item.id)}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+                  activePage === item.id
+                    ? "bg-sakura-500/20 text-sakura-500"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-800"
+                }`}
+              >
+                {item.icon}
+                <span className="text-sm font-medium">{item.label}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 };

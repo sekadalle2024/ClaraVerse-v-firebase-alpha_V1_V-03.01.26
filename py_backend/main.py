@@ -21,11 +21,23 @@ from io import BytesIO
 import PyPDF2
 import xml.etree.ElementTree as ET
 
-# Import Speech2Text
-from Speech2Text import Speech2Text
+# Import Speech2Text (optionnel)
+try:
+    from Speech2Text import Speech2Text
+    SPEECH2TEXT_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"Speech2Text not available: {e}")
+    SPEECH2TEXT_AVAILABLE = False
+    Speech2Text = None
 
-# Import Text2Speech
-from Text2Speech import Text2Speech
+# Import Text2Speech (optionnel)
+try:
+    from Text2Speech import Text2Speech
+    TEXT2SPEECH_AVAILABLE = True
+except ImportError as e:
+    logging.warning(f"Text2Speech not available: {e}")
+    TEXT2SPEECH_AVAILABLE = False
+    Text2Speech = None
 
 # LightRAG imports
 try:
@@ -65,6 +77,14 @@ logger.info(f"Starting server on {HOST}:{PORT}")
 
 # Setup FastAPI
 app = FastAPI(title="Clara Backend API", version="1.0.0")
+
+# Import and include the Pandas API router
+try:
+    from pandas_api import router as pandas_router
+    app.include_router(pandas_router)
+    logger.info("✅ Pandas API router loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Pandas API not available: {e}")
 
 # Import and include the diffusers API router
 # Add CORS middleware

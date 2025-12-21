@@ -394,8 +394,15 @@ const ClaraAssistant: React.FC<ClaraAssistantProps> = ({ onPageChange }) => {
   // Check if Clara is currently visible (for background operation)
   const isVisible = useIsVisible();
   
-  // State for toggling chat history sidebar
-  const [showChatHistory, setShowChatHistory] = useState(false);
+  // État de la sidebar : 'logo' | 'menu' | 'chatHistory'
+  // - 'logo' : affiche uniquement le logo (état initial)
+  // - 'menu' : affiche le menu de navigation (Dashboard, Chat, etc.)
+  // - 'chatHistory' : affiche l'historique des chats (ClaraSidebar)
+  const [sidebarState, setSidebarState] = useState<'logo' | 'menu' | 'chatHistory'>('logo');
+  
+  // Helpers pour la compatibilité
+  const showChatHistory = sidebarState === 'chatHistory';
+  const showMenu = sidebarState === 'menu';
   
   // User and session state
   const [userName, setUserName] = useState<string>('');
@@ -3735,9 +3742,26 @@ ${data.timezone ? `• **Timezone:** ${data.timezone}` : ''}`;
 
       {/* Content with relative z-index */}
       <div className="relative z-10 flex h-screen w-full">
-        {/* Grok Style: Les deux sidebars se remplacent à GAUCHE */}
-        {showChatHistory ? (
-          /* Chat History Sidebar - Visible quand showChatHistory = true */
+        {/* Système de switch à 3 états pour la sidebar gauche */}
+        {/* État 'menu' : Menu de navigation complet */}
+        {showMenu && (
+          <Sidebar 
+            activePage="clara" 
+            onPageChange={(page) => {
+              if (page === 'clara') {
+                // Clic sur Chat → affiche l'historique des chats
+                setSidebarState('chatHistory');
+              } else {
+                onPageChange(page);
+              }
+            }}
+            showChatHistoryIndicator={false}
+            onLogoClick={() => setSidebarState('logo')}
+          />
+        )}
+        
+        {/* État 'chatHistory' : Historique des chats */}
+        {showChatHistory && (
           <ClaraSidebar 
             sessions={sessions}
             currentSessionId={currentSession?.id}
@@ -3748,21 +3772,7 @@ ${data.timezone ? `• **Timezone:** ${data.timezone}` : ''}`;
             onNewChat={handleNewChat}
             onSessionAction={handleSessionAction}
             onLoadMore={loadMoreSessions}
-            onClose={() => setShowChatHistory(false)}
-          />
-        ) : (
-          /* App Sidebar (main navigation) - Visible quand showChatHistory = false */
-          <Sidebar 
-            activePage="clara" 
-            onPageChange={(page) => {
-              if (page === 'clara') {
-                // Afficher la chat history quand on clique sur Chat
-                setShowChatHistory(true);
-              } else {
-                onPageChange(page);
-              }
-            }}
-            showChatHistoryIndicator={showChatHistory}
+            onClose={() => setSidebarState('menu')}
           />
         )}
 
@@ -3772,20 +3782,8 @@ ${data.timezone ? `• **Timezone:** ${data.timezone}` : ''}`;
           <Topbar 
             userName={userName}
             onPageChange={onPageChange}
+            onLogoClick={() => setSidebarState('menu')}
           />
-          
-          {/* Toggle Chat History Button - Grok style (floating on left side) */}
-          {!showChatHistory && (
-            <button
-              onClick={() => setShowChatHistory(true)}
-              className="fixed left-4 top-20 z-50 p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 group"
-              title="Show chat history"
-            >
-              <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-sakura-600 dark:group-hover:text-sakura-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          )}
           
           {/* Chat Window */}
           <ClaraChatWindow

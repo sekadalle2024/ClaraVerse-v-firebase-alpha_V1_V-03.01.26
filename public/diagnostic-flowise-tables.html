@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Diagnostic Flowise Tables</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #2a2a2a;
+            border-radius: 5px;
+        }
+
+        .ok {
+            color: #0f0;
+        }
+
+        .warn {
+            color: #ff0;
+        }
+
+        .error {
+            color: #f00;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        pre {
+            background: #000;
+            padding: 10px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔍 Diagnostic Flowise Tables</h1>
+
+    <div class="section">
+        <h2>1. LocalStorage</h2>
+        <button onclick="checkLocalStorage()">Vérifier LocalStorage</button>
+        <button onclick="cleanNotifications()">Nettoyer Notifications</button>
+        <pre id="storage-result"></pre>
+    </div>
+
+    <div class="section">
+        <h2>2. Script Flowise.js</h2>
+        <button onclick="checkFlowiseScript()">Vérifier Script</button>
+        <pre id="script-result"></pre>
+    </div>
+
+    <div class="section">
+        <h2>3. Tables Détectées</h2>
+        <button onclick="scanTables()">Scanner Tables</button>
+        <pre id="tables-result"></pre>
+    </div>
+
+    <div class="section">
+        <h2>4. Console Logs</h2>
+        <button onclick="enableDebug()">Activer Debug</button>
+        <pre id="debug-result">Ouvrez la console (F12) pour voir les logs</pre>
+    </div>
+
+    <script>
+        function checkLocalStorage() {
+            const result = document.getElementById('storage-result');
+            result.textContent = '🔄 Analyse en cours...\n';
+
+            try {
+                let totalSize = 0;
+                let items = [];
+
+                for (let key in localStorage) {
+                    if (localStorage.hasOwnProperty(key)) {
+                        const value = localStorage.getItem(key);
+                        const size = new Blob([value]).size;
+                        totalSize += size;
+                        items.push({
+                            key: key,
+                            size: size,
+                            sizeKB: (size / 1024).toFixed(2)
+                        });
+                    }
+                }
+
+                items.sort((a, b) => b.size - a.size);
+
+                result.textContent = `📊 LocalStorage Status:\n`;
+                result.textContent += `   Total items: ${items.length}\n`;
+                result.textContent += `   Total size: ${(totalSize / 1024).toFixed(2)} KB\n`;
+                result.textContent += `   Quota: ~5-10 MB\n`;
+                result.textContent += `   Usage: ${((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1)}%\n\n`;
+
+                result.textContent += `📦 Top 10 items:\n`;
+                items.slice(0, 10).forEach(item => {
+                    const status = item.size > 100000 ? '⚠️' : '✅';
+                    result.textContent += `   ${status} ${item.key}: ${item.sizeKB} KB\n`;
+                });
+
+                // Vérifier les notifications
+                const notifKeys = ['clara-notifications', 'notifications'];
+                notifKeys.forEach(key => {
+                    const value = localStorage.getItem(key);
+                    if (value) {
+                        const size = new Blob([value]).size;
+                        if (size > 500000) {
+                            result.textContent += `\n❌ PROBLEME: ${key} est trop volumineux (${(size / 1024).toFixed(2)} KB)\n`;
+                            result.textContent += `   Solution: Cliquez sur "Nettoyer Notifications"\n`;
+                        }
+                    }
+                });
+
+            } catch (error) {
+                result.textContent += `\n❌ Erreur: ${error.message}`;
+            }
+        }
+
+        function cleanNotifications() {
+            const result = document.getElementById('storage-result');
+            result.textContent = '🧹 Nettoyage en cours...\n';
+
+            const notifKeys = [
+                'clara-notifications',
+                'notifications',
+                'clara-notification-history'
+            ];
+
+            let cleaned = 0;
+            notifKeys.forEach(key => {
+                if (localStorage.getItem(key)) {
+                    localStorage.removeItem(key);
+                    cleaned++;
+                    result.textContent += `✅ ${key} supprimé\n`;
+                }
+            });
+
+            if (cleaned === 0) {
+                result.textContent += '✅ Aucune notification à nettoyer\n';
+            } else {
+                result.textContent += `\n✅ ${cleaned} clé(s) nettoyée(s)\n`;
+                result.textContent += '🔄 Rechargez la page principale\n';
+            }
+        }
+
+        function checkFlowiseScript() {
+            const result = document.getElementById('script-result');
+            result.textContent = '🔄 Vérification...\n';
+
+            // Vérifier si le script est chargé dans la page principale
+            result.textContent += '⚠️ Ce diagnostic doit être exécuté dans la console de la page principale\n\n';
+            result.textContent += 'Instructions:\n';
+            result.textContent += '1. Ouvrez votre application ClaraVerse\n';
+            result.textContent += '2. Ouvrez la console (F12)\n';
+            result.textContent += '3. Tapez: console.log(window.FlowiseV17Loaded)\n';
+            result.textContent += '4. Si undefined, le script n\'est pas chargé\n\n';
+            result.textContent += 'Pour charger le script:\n';
+            result.textContent += '   const script = document.createElement("script");\n';
+            result.textContent += '   script.src = "/Flowise.js";\n';
+            result.textContent += '   document.head.appendChild(script);\n';
+        }
+
+        function scanTables() {
+            const result = document.getElementById('tables-result');
+            result.textContent = '🔄 Scan en cours...\n';
+
+            const selector = 'table.min-w-full.border.border-gray-200.dark\\:border-gray-700.rounded-lg';
+            const tables = document.querySelectorAll(selector);
+
+            result.textContent += `📊 Tables trouvées: ${tables.length}\n\n`;
+
+            if (tables.length === 0) {
+                result.textContent += '⚠️ Aucune table détectée\n';
+                result.textContent += 'Vérifiez que vous êtes sur la page principale avec des tables\n';
+            } else {
+                tables.forEach((table, index) => {
+                    const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
+                    const hasFlowise = headers.some(h => h.toLowerCase() === 'flowise');
+                    const processed = table.classList.contains('n8n-processed');
+
+                    result.textContent += `Table ${index + 1}:\n`;
+                    result.textContent += `   Headers: ${headers.join(', ')}\n`;
+                    result.textContent += `   Flowise: ${hasFlowise ? '✅ OUI' : '❌ NON'}\n`;
+                    result.textContent += `   Processed: ${processed ? '✅ OUI' : '❌ NON'}\n\n`;
+                });
+            }
+        }
+
+        function enableDebug() {
+            const result = document.getElementById('debug-result');
+            result.textContent = '✅ Debug activé dans la console\n\n';
+            result.textContent += 'Logs à surveiller:\n';
+            result.textContent += '   🚀 Initialisation du script\n';
+            result.textContent += '   🔍 Scan des tables\n';
+            result.textContent += '   ✅ Table Flowise détectée\n';
+            result.textContent += '   📦 Collecte des tables\n';
+            result.textContent += '   📡 Envoi vers n8n\n\n';
+            result.textContent += 'Si vous ne voyez aucun log:\n';
+            result.textContent += '   1. Le script n\'est pas chargé\n';
+            result.textContent += '   2. Vérifiez index.html pour <script src="/Flowise.js">\n';
+
+            console.log('🔍 DEBUG MODE ACTIVÉ');
+            console.log('📋 Sélecteur de tables:', 'table.min-w-full.border.border-gray-200.dark\\:border-gray-700.rounded-lg');
+            console.log('🌐 Endpoint n8n:', 'https://xomava4845.app.n8n.cloud/webhook/htlm_processor');
+        }
+    </script>
+</body>
+
+</html>

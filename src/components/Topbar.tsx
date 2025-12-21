@@ -5,15 +5,17 @@ import UserProfileButton from './common/UserProfileButton';
 import NotificationPanel from './common/NotificationPanel';
 import ThemeSelector from './ThemeSelector';
 import { db } from '../db';
+import logo from "../assets/logo.png";
 
 interface TopbarProps {
   userName?: string;
   onPageChange?: (page: string) => void;
   projectTitle?: string;
   showProjectTitle?: boolean;
+  onLogoClick?: () => void;
 }
 
-const Topbar = ({ userName, onPageChange, projectTitle, showProjectTitle = false }: TopbarProps) => {
+const Topbar = ({ userName, onPageChange, projectTitle, showProjectTitle = false, onLogoClick }: TopbarProps) => {
   const { theme, setTheme } = useTheme();
   const [now, setNow] = useState(new Date());
   const [timezone, setTimezone] = useState<string>(Intl.DateTimeFormat().resolvedOptions().timeZone);
@@ -109,7 +111,16 @@ const Topbar = ({ userName, onPageChange, projectTitle, showProjectTitle = false
 
   return (
     <div className="topbar-grok h-16 px-6 flex items-center justify-between relative z-[10000]">
-      <div className="flex-1" />
+      <div className="flex items-center">
+        {/* Logo E-audit aligné avec les icônes */}
+        <button
+          onClick={() => onLogoClick?.()}
+          className="hover:opacity-80 hover:scale-110 transition-all cursor-pointer flex items-center justify-center"
+          title="Afficher l'historique des chats"
+        >
+          <img src={logo} alt="E-audit Logo" className="w-5 h-5" />
+        </button>
+      </div>
       {/* Center section - Project Title only (Clock removed) */}
       <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
         {showProjectTitle && projectTitle && (

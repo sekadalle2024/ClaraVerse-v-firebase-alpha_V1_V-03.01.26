@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Logs N8N Améliorés</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .alert {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .alert strong {
+            color: #856404;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px 28px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .test-section h3 {
+            color: #667eea;
+            margin-top: 0;
+        }
+
+        label {
+            font-weight: 600;
+            display: block;
+            margin-top: 15px;
+            color: #333;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .console-output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 600px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .log-success {
+            color: #4caf50;
+        }
+
+        .log-error {
+            color: #f44336;
+        }
+
+        .log-warning {
+            color: #ff9800;
+        }
+
+        .log-info {
+            color: #2196f3;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔍 Test des Logs N8N Améliorés</h1>
+        <p class="subtitle">Testez la communication avec n8n et visualisez les logs détaillés</p>
+
+        <div class="alert">
+            <strong>💡 Important :</strong> Ouvrez la console du navigateur (F12) pour voir les logs détaillés complets
+            !
+            <br>Cette page affiche un résumé, mais la console contient tous les détails.
+        </div>
+
+        <div class="test-section">
+            <h3>⚙️ Configuration</h3>
+
+            <label for="endpoint">Endpoint N8N:</label>
+            <input type="text" id="endpoint" value="https://barow52161.app.n8n.cloud/webhook/htlm_processor"
+                placeholder="https://votre-n8n.app.n8n.cloud/webhook/htlm_processor">
+
+            <label for="keyword">Mot-clé (pour simulation):</label>
+            <input type="text" id="keyword" value="Programme de travail"
+                placeholder="Ex: Programme de travail, Frap, Synthèse">
+
+            <label for="testData">Tables HTML à envoyer:</label>
+            <textarea id="testData" rows="10"><table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+  <thead><tr><th>Rubrique</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td>Etape</td><td>Programme de travail</td></tr>
+    <tr><td>Reference</td><td>PGT-001</td></tr>
+  </tbody>
+</table>
+
+<table class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+  <thead><tr><th>Flowise</th></tr></thead>
+  <tbody><tr><td>Programme de travail</td></tr></tbody>
+</table></textarea>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <button onclick="testWithFullLogs()">🚀 Test Complet avec Logs</button>
+            <button onclick="testMinimal()">📋 Test Minimal</button>
+            <button onclick="testEmpty()">⚠️ Test Réponse Vide</button>
+            <button onclick="clearConsole()">🗑️ Effacer Console</button>
+        </div>
+
+        <div id="summary" class="console-output" style="display: none;"></div>
+    </div>
+
+    <script>
+        let logBuffer = [];
+
+        function log(message, type = 'info') {
+            const colors = {
+                success: '#4caf50',
+                error: '#f44336',
+                warning: '#ff9800',
+                info: '#2196f3'
+            };
+
+            console.log(`%c${message}`, `color: ${colors[type]}`);
+            logBuffer.push({ message, type, timestamp: new Date().toISOString() });
+        }
+
+        function displaySummary() {
+            const summaryDiv = document.getElementById('summary');
+            summaryDiv.style.display = 'block';
+
+            let html = '<div style="margin-bottom: 20px;">';
+            html += '<strong style="color: #4caf50;">📊 Résumé des Logs</strong><br><br>';
+
+            logBuffer.forEach(entry => {
+                const colorClass = `log-${entry.type}`;
+                html += `<div class="${colorClass}">${entry.message}</div>`;
+            });
+
+            html += '</div>';
+            summaryDiv.innerHTML = html;
+        }
+
+        async function testWithFullLogs() {
+            logBuffer = [];
+            const endpoint = document.getElementById('endpoint').value;
+            const testData = document.getElementById('testData').value;
+            const keyword = document.getElementById('keyword').value;
+
+            console.clear();
+            log('═══════════════════════════════════════════════════════', 'info');
+            log('🚀 DÉBUT DU TEST AVEC LOGS AMÉLIORÉS', 'success');
+            log('═══════════════════════════════════════════════════════', 'info');
+
+            try {
+                // Simulation de la collecte des tables
+                log('\n╔═══════════════════════════════════════════════════════╗', 'info');
+                log('║  📦 COLLECTE DES TABLES HTML                          ║', 'info');
+                log('╚═══════════════════════════════════════════════════════╝', 'info');
+
+                const tableCount = (testData.match(/<table/g) || []).length;
+                log(`\n🔍 ÉTAPE 1: RECHERCHE DES TABLES CRITÈRES`, 'info');
+                log(`  ├─ Mot-clé recherché: "${keyword}"`, 'info');
+                log(`  ├─ Tables détectées: ${tableCount}`, 'success');
+                log(`  └─ Taille totale: ${testData.length} caractères`, 'info');
+
+                // Envoi à n8n
+                log('\n╔═══════════════════════════════════════════════════════╗', 'info');
+                log('║  🚀 COMMUNICATION AVEC N8N                            ║', 'info');
+                log('╚═══════════════════════════════════════════════════════╝', 'info');
+
+                log('\n📋 ÉTAPE 1: PRÉPARATION DE LA REQUÊTE', 'info');
+                log(`  ├─ Endpoint: ${endpoint}`, 'info');
+                log(`  ├─ Méthode: POST`, 'info');
+                log(`  └─ Mot-clé cible: ${keyword}`, 'info');
+
+                const payload = { question: testData };
+                const payloadSize = JSON.stringify(payload).length;
+
+                log('\n  📦 Contenu du payload:', 'info');
+                log(`    ├─ Nombre de tables HTML: ${tableCount}`, 'info');
+                log(`    ├─ Taille totale: ${payloadSize} caractères (${(payloadSize / 1024).toFixed(2)} KB)`, 'info');
+
+                log('\n📡 ÉTAPE 2: ENVOI DE LA REQUÊTE', 'info');
+                const startTime = Date.now();
+
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const duration = Date.now() - startTime;
+
+                log('\n📥 ÉTAPE 3: RÉCEPTION DE LA RÉPONSE N8N', 'info');
+                log(`  ├─ Statut HTTP: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                log(`  ├─ Durée requête: ${duration}ms`, 'info');
+                log(`  └─ OK: ${response.ok ? '✅ OUI' : '❌ NON'}`, response.ok ? 'success' : 'error');
+
+                const responseText = await response.text();
+                const responseSize = responseText.length;
+
+                log('\n📄 ÉTAPE 4: LECTURE DU CONTENU DE LA RÉPONSE', 'info');
+                log(`  ├─ Taille reçue: ${responseSize} caractères`, 'info');
+                log(`  └─ Est vide? ${responseSize === 0 ? '❌ OUI (PROBLÈME!)' : '✅ NON'}`, responseSize === 0 ? 'error' : 'success');
+
+                if (responseSize > 0) {
+                    log(`\n  📄 Aperçu de la réponse:`, 'info');
+                    log(`    ${responseText.substring(0, 200)}...`, 'info');
+                }
+
+                log('\n🔍 ÉTAPE 5: ANALYSE ET PARSING JSON', 'info');
+                let responseData;
+                try {
+                    responseData = JSON.parse(responseText);
+                    log(`  ├─ Parsing: ✅ SUCCÈS`, 'success');
+                    log(`  ├─ Type: ${Array.isArray(responseData) ? 'Array' : typeof responseData}`, 'info');
+                    log(`  └─ Contenu: ${JSON.stringify(responseData, null, 2).substring(0, 300)}...`, 'info');
+                } catch (e) {
+                    log(`  ├─ Parsing: ❌ ÉCHEC`, 'error');
+                    log(`  └─ Erreur: ${e.message}`, 'error');
+                }
+
+                log('\n╔═══════════════════════════════════════════════════════╗', 'info');
+                log('║  📊 RÉSUMÉ DE LA COMMUNICATION N8N                    ║', 'info');
+                log('╚═══════════════════════════════════════════════════════╝', 'info');
+                log(`\n  🔄 Requête:`, 'info');
+                log(`    ├─ Tables envoyées: ${tableCount}`, 'info');
+                log(`    └─ Taille: ${(payloadSize / 1024).toFixed(2)} KB`, 'info');
+                log(`\n  📥 Réponse:`, 'info');
+                log(`    ├─ HTTP OK? ${response.ok ? '✅ OUI' : '❌ NON'}`, response.ok ? 'success' : 'error');
+                log(`    ├─ Données reçues? ${responseSize > 0 ? '✅ OUI' : '❌ NON'}`, responseSize > 0 ? 'success' : 'error');
+                log(`    └─ Durée: ${duration}ms`, 'info');
+
+                log('\n✅ TEST TERMINÉ AVEC SUCCÈS', 'success');
+
+            } catch (error) {
+                log('\n❌ ERREUR FATALE', 'error');
+                log(`  Message: ${error.message}`, 'error');
+            }
+
+            log('\n═══════════════════════════════════════════════════════', 'info');
+            displaySummary();
+        }
+
+        async function testMinimal() {
+            document.getElementById('testData').value = '<table><tr><td>Test</td></tr></table>';
+            await testWithFullLogs();
+        }
+
+        async function testEmpty() {
+            log('⚠️ Test de réponse vide simulé', 'warning');
+            log('Dans un cas réel, vous verriez:', 'info');
+            log('❌ RÉPONSE VIDE DÉTECTÉE', 'error');
+            log('  ├─ Le workflow n8n n\'a retourné aucune donnée', 'error');
+            log('  └─ Action: Vérifiez votre workflow n8n', 'warning');
+            displaySummary();
+        }
+
+        function clearConsole() {
+            console.clear();
+            logBuffer = [];
+            document.getElementById('summary').style.display = 'none';
+        }
+    </script>
+</body>
+
+</html>

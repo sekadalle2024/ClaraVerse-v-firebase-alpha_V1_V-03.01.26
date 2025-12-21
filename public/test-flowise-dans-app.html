@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Test Flowise dans Application</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #2a2a2a;
+            border-radius: 5px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background: #0f0;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #0c0;
+        }
+
+        pre {
+            background: #000;
+            padding: 10px;
+            overflow-x: auto;
+            border: 1px solid #0f0;
+        }
+
+        .ok {
+            color: #0f0;
+        }
+
+        .warn {
+            color: #ff0;
+        }
+
+        .error {
+            color: #f00;
+        }
+
+        code {
+            background: #333;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔍 Test Flowise.js dans Votre Application</h1>
+
+    <div class="section">
+        <h2>📋 Instructions</h2>
+        <ol>
+            <li>Ouvrez votre application ClaraVerse (http://localhost:5173)</li>
+            <li>Ouvrez la console (F12)</li>
+            <li>Copiez-collez les commandes ci-dessous</li>
+            <li>Partagez les résultats</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>1️⃣ Vérifier le Chargement du Script</h2>
+        <button onclick="copyCommand1()">Copier la Commande</button>
+        <pre id="cmd1">// Vérifier si Flowise.js est chargé
+const scripts = Array.from(document.querySelectorAll('script')).map(s => s.src);
+const flowiseScript = scripts.find(s => s.includes('Flowise.js'));
+console.log('📜 Script Flowise:', flowiseScript || '❌ NON TROUVÉ');
+console.log('📊 Total scripts:', scripts.length);</pre>
+    </div>
+
+    <div class="section">
+        <h2>2️⃣ Scanner les Tables</h2>
+        <button onclick="copyCommand2()">Copier la Commande</button>
+        <pre id="cmd2">// Scanner toutes les tables
+const selector = 'table.min-w-full.border.border-gray-200.dark\\:border-gray-700.rounded-lg';
+const tables = document.querySelectorAll(selector);
+console.log('📊 Tables trouvées:', tables.length);
+
+tables.forEach((table, i) => {
+    const headers = Array.from(table.querySelectorAll('th')).map(th => th.textContent.trim());
+    const hasFlowise = headers.some(h => h.toLowerCase() === 'flowise');
+    console.log(`\nTable ${i+1}:`);
+    console.log('  Headers:', headers);
+    console.log('  Flowise:', hasFlowise ? '✅ OUI' : '❌ NON');
+    console.log('  Processed:', table.classList.contains('n8n-processed') ? '✅ OUI' : '❌ NON');
+});</pre>
+    </div>
+
+    <div class="section">
+        <h2>3️⃣ Forcer le Rechargement du Script</h2>
+        <button onclick="copyCommand3()">Copier la Commande</button>
+        <pre id="cmd3">// Forcer le rechargement de Flowise.js
+const oldScript = document.querySelector('script[src*="Flowise.js"]');
+if (oldScript) oldScript.remove();
+
+const script = document.createElement('script');
+script.src = '/Flowise.js?v=' + Date.now();
+script.onload = () => {
+    console.log('✅ Flowise.js rechargé avec succès');
+    console.log('🔄 Attendez 2 secondes pour l\'initialisation...');
+    setTimeout(() => {
+        console.log('✅ Initialisation terminée');
+        console.log('📝 Envoyez maintenant un message avec une table Flowise');
+    }, 2000);
+};
+script.onerror = (e) => {
+    console.error('❌ Erreur de chargement:', e);
+};
+document.head.appendChild(script);</pre>
+    </div>
+
+    <div class="section">
+        <h2>4️⃣ Nettoyer le LocalStorage</h2>
+        <button onclick="copyCommand4()">Copier la Commande</button>
+        <pre id="cmd4">// Nettoyer les notifications qui saturent le localStorage
+localStorage.removeItem('clara-notifications');
+localStorage.removeItem('notifications');
+localStorage.removeItem('clara-notification-history');
+
+let totalSize = 0;
+for (let key in localStorage) {
+    if (localStorage.hasOwnProperty(key)) {
+        totalSize += new Blob([localStorage.getItem(key)]).size;
+    }
+}
+console.log('✅ Notifications supprimées');
+console.log('📊 Taille localStorage:', (totalSize / 1024).toFixed(2), 'KB');
+console.log('🔄 Rechargez la page avec Ctrl+F5');</pre>
+    </div>
+
+    <div class="section">
+        <h2>5️⃣ Créer une Table de Test</h2>
+        <button onclick="copyCommand5()">Copier la Commande</button>
+        <pre id="cmd5">// Créer une table de test dans le chat
+const testTable = `
+| Flowise | Description |
+|---------|-------------|
+| test    | Table de test pour vérifier la détection |
+`;
+
+console.log('📝 Copiez cette table et envoyez-la dans le chat:');
+console.log(testTable);
+console.log('\n✅ Après envoi, surveillez la console pour:');
+console.log('   🚀 Initialisation du script');
+console.log('   🔍 Scan des tables');
+console.log('   ✅ Table Flowise détectée');
+console.log('   📦 Collecte des tables');
+console.log('   📡 Envoi vers n8n');</pre>
+    </div>
+
+    <div class="section">
+        <h2>6️⃣ Activer le Mode Debug Complet</h2>
+        <button onclick="copyCommand6()">Copier la Commande</button>
+        <pre id="cmd6">// Activer tous les logs de debug
+console.log('🔍 MODE DEBUG ACTIVÉ');
+console.log('=====================================');
+console.log('📋 Configuration:');
+console.log('   Sélecteur:', 'table.min-w-full.border.border-gray-200.dark\\:border-gray-700.rounded-lg');
+console.log('   Endpoint:', 'https://xomava4845.app.n8n.cloud/webhook/htlm_processor');
+console.log('   Colonne déclencheuse:', 'Flowise');
+console.log('=====================================');
+
+// Surveiller les mutations DOM
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.addedNodes.length > 0) {
+            mutation.addedNodes.forEach((node) => {
+                if (node.nodeType === 1 && node.tagName === 'TABLE') {
+                    console.log('🆕 Nouvelle table détectée!', node);
+                }
+            });
+        }
+    });
+});
+
+observer.observe(document.body, { childList: true, subtree: true });
+console.log('✅ Surveillance DOM activée');
+console.log('📝 Envoyez maintenant un message avec une table');</pre>
+    </div>
+
+    <script>
+        function copyCommand1() { copyToClipboard('cmd1'); }
+        function copyCommand2() { copyToClipboard('cmd2'); }
+        function copyCommand3() { copyToClipboard('cmd3'); }
+        function copyCommand4() { copyToClipboard('cmd4'); }
+        function copyCommand5() { copyToClipboard('cmd5'); }
+        function copyCommand6() { copyToClipboard('cmd6'); }
+
+        function copyToClipboard(id) {
+            const text = document.getElementById(id).textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ Commande copiée!\n\nCollez-la dans la console de votre application (F12)');
+            }).catch(err => {
+                alert('❌ Erreur de copie: ' + err);
+            });
+        }
+    </script>
+</body>
+
+</html>

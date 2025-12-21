@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Test Chargement Flowise.js</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #00ff00;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 10px;
+        }
+
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .success {
+            background: #10b981;
+            color: #fff;
+        }
+
+        .error {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .warning {
+            background: #f59e0b;
+            color: #000;
+        }
+
+        .info {
+            background: #3b82f6;
+            color: #fff;
+        }
+
+        pre {
+            background: #1a1a1a;
+            padding: 15px;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px 5px;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background: #00cc00;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🧪 TEST DE CHARGEMENT FLOWISE.JS</h1>
+
+    <div id="status"></div>
+
+    <h2>📋 Tests Disponibles</h2>
+    <button onclick="testScriptCharge()">1. Script Chargé?</button>
+    <button onclick="testConsoleLog()">2. Console Fonctionne?</button>
+    <button onclick="testMutationObserver()">3. MutationObserver?</button>
+    <button onclick="creerTableTest()">4. Créer Table Test</button>
+
+    <h2>📊 Résultats</h2>
+    <pre id="results"></pre>
+
+    <h2>🔍 Logs Console (Temps Réel)</h2>
+    <pre id="console-logs"></pre>
+
+    <script>
+        const statusDiv = document.getElementById('status');
+        const resultsDiv = document.getElementById('results');
+        const consoleLogsDiv = document.getElementById('console-logs');
+
+        // Capturer les logs console
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        console.log = function (...args) {
+            originalLog.apply(console, args);
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            consoleLogsDiv.textContent += `[LOG] ${message}\n`;
+            consoleLogsDiv.scrollTop = consoleLogsDiv.scrollHeight;
+        };
+
+        console.error = function (...args) {
+            originalError.apply(console, args);
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            consoleLogsDiv.textContent += `[ERROR] ${message}\n`;
+            consoleLogsDiv.scrollTop = consoleLogsDiv.scrollHeight;
+        };
+
+        console.warn = function (...args) {
+            originalWarn.apply(console, args);
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            consoleLogsDiv.textContent += `[WARN] ${message}\n`;
+            consoleLogsDiv.scrollTop = consoleLogsDiv.scrollHeight;
+        };
+
+        function addStatus(message, type) {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            statusDiv.appendChild(div);
+        }
+
+        function log(message) {
+            resultsDiv.textContent += message + '\n';
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function testScriptCharge() {
+            resultsDiv.textContent = '';
+            log('═══════════════════════════════════════════════════════');
+            log('TEST 1: VÉRIFICATION DU CHARGEMENT DU SCRIPT');
+            log('═══════════════════════════════════════════════════════\n');
+
+            // Vérifier si le script est dans le DOM
+            const scripts = Array.from(document.querySelectorAll('script'));
+            const flowiseScript = scripts.find(s => s.src && s.src.includes('Flowise.js'));
+
+            if (flowiseScript) {
+                log('✅ Script Flowise.js trouvé dans le DOM');
+                log('   Src: ' + flowiseScript.src);
+                addStatus('✅ Script Flowise.js présent dans le DOM', 'success');
+            } else {
+                log('❌ Script Flowise.js NON trouvé dans le DOM');
+                addStatus('❌ Script Flowise.js absent du DOM', 'error');
+            }
+
+            // Vérifier les erreurs JavaScript
+            log('\n📋 Vérification des erreurs JavaScript:');
+            log('   Ouvrir la console (F12) et chercher les erreurs en rouge');
+
+            // Vérifier si des fonctions globales existent
+            log('\n📋 Vérification des variables globales:');
+            log('   (Si Flowise.js définit des variables globales, elles apparaîtraient ici)');
+
+            log('\n💡 PROCHAINES ÉTAPES:');
+            log('   1. Ouvrir la console du navigateur (F12)');
+            log('   2. Chercher des messages commençant par "🚀"');
+            log('   3. Chercher des erreurs en rouge');
+            log('   4. Si aucun log "🚀 Initialisation", le script ne s\'exécute pas');
+        }
+
+        function testConsoleLog() {
+            resultsDiv.textContent = '';
+            log('═══════════════════════════════════════════════════════');
+            log('TEST 2: VÉRIFICATION DE LA CONSOLE');
+            log('═══════════════════════════════════════════════════════\n');
+
+            console.log('🧪 Test de console.log');
+            console.warn('⚠️ Test de console.warn');
+            console.error('❌ Test de console.error');
+
+            log('✅ Tests de console effectués');
+            log('   Vérifier ci-dessus dans "Logs Console (Temps Réel)"');
+            addStatus('✅ Console fonctionne correctement', 'success');
+        }
+
+        function testMutationObserver() {
+            resultsDiv.textContent = '';
+            log('═══════════════════════════════════════════════════════');
+            log('TEST 3: VÉRIFICATION DU MUTATIONOBSERVER');
+            log('═══════════════════════════════════════════════════════\n');
+
+            log('📋 Création d\'un MutationObserver de test...');
+
+            const observer = new MutationObserver((mutations) => {
+                log('✅ MutationObserver déclenché!');
+                log('   Nombre de mutations: ' + mutations.length);
+                mutations.forEach((mutation, index) => {
+                    log(`   Mutation ${index + 1}:`);
+                    log(`      Type: ${mutation.type}`);
+                    log(`      Nodes ajoutés: ${mutation.addedNodes.length}`);
+                });
+            });
+
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+
+            log('✅ MutationObserver créé et activé');
+            log('\n📋 Ajout d\'un élément de test...');
+
+            const testDiv = document.createElement('div');
+            testDiv.textContent = 'Test MutationObserver';
+            testDiv.style.display = 'none';
+            document.body.appendChild(testDiv);
+
+            setTimeout(() => {
+                document.body.removeChild(testDiv);
+                observer.disconnect();
+                log('\n✅ Test terminé - MutationObserver fonctionne!');
+                addStatus('✅ MutationObserver fonctionne', 'success');
+            }, 100);
+        }
+
+        function creerTableTest() {
+            resultsDiv.textContent = '';
+            log('═══════════════════════════════════════════════════════');
+            log('TEST 4: CRÉATION D\'UNE TABLE DE TEST');
+            log('═══════════════════════════════════════════════════════\n');
+
+            log('📋 Création d\'une table Flowise de test...');
+
+            const table = document.createElement('table');
+            table.className = 'min-w-full border border-gray-200 dark:border-gray-700 rounded-lg';
+            table.style.margin = '20px 0';
+            table.style.borderCollapse = 'separate';
+            table.style.borderSpacing = '0';
+            table.style.border = '1px solid #4b5563';
+
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            const th = document.createElement('th');
+            th.textContent = 'Flowise';
+            th.style.padding = '12px';
+            th.style.background = '#374151';
+            th.style.borderBottom = '1px solid #4b5563';
+            headerRow.appendChild(th);
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            const dataRow = document.createElement('tr');
+            const td = document.createElement('td');
+            td.textContent = 'Gestion stratégique';
+            td.style.padding = '12px';
+            td.style.borderBottom = '1px solid #4b5563';
+            dataRow.appendChild(td);
+            tbody.appendChild(dataRow);
+            table.appendChild(tbody);
+
+            document.body.appendChild(table);
+
+            log('✅ Table créée et ajoutée au DOM');
+            log('   En-tête: Flowise');
+            log('   Mot-clé: Gestion stratégique');
+            log('\n📋 Si Flowise.js fonctionne, vous devriez voir:');
+            log('   - "🔔 MUTATION DÉTECTÉE"');
+            log('   - "📋 NOUVELLE TABLE DÉTECTÉE"');
+            log('   - "✅ TABLE FLOWISE TROUVÉE!"');
+            log('\n💡 Vérifier les logs dans "Logs Console (Temps Réel)" ci-dessus');
+
+            addStatus('✅ Table de test créée - Vérifier les logs', 'success');
+        }
+
+        // Auto-test au chargement
+        window.addEventListener('load', () => {
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('🧪 PAGE DE TEST CHARGÉE');
+            console.log('═══════════════════════════════════════════════════════');
+            console.log('├─ Timestamp:', new Date().toISOString());
+            console.log('└─ Prêt pour les tests\n');
+
+            addStatus('✅ Page de test chargée', 'success');
+            addStatus('💡 Cliquer sur les boutons pour lancer les tests', 'info');
+        });
+    </script>
+
+    <!-- Charger Flowise.js -->
+    <script src="/Flowise.js"></script>
+</body>
+
+</html>
