@@ -1,5 +1,7 @@
 import type { Workflow } from '../Store';
-import workflowsData from '../workflows/n8n_workflows_full.json';
+
+// Embedded workflows data to avoid import resolution issues
+const workflowsData: any[] = [];
 
 // Add ID to each workflow for consistency
 const addIdToWorkflows = (workflows: any[]): Workflow[] => {
