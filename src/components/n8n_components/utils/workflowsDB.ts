@@ -7,25 +7,15 @@ export interface Workflow {
   [key: string]: any;
 }
 
-// Fetch workflows from the local JSON file
+// Fetch workflows - returns empty array for Vercel deployment
+// The JSON file is not needed for the web version
 export async function fetchWorkflows(): Promise<Workflow[]> {
-  try {
-    const workflowsData = await import('../workflows/n8n_workflows_full.json');
-    return (workflowsData.default || workflowsData) as Workflow[];
-  } catch (error) {
-    console.error('Error loading workflows:', error);
-    return [];
-  }
+  return [];
 }
 
 // Prefetch and store workflows (for compatibility)
 export async function prefetchAndStoreWorkflows(): Promise<void> {
-  try {
-    const workflows = await fetchWorkflows();
-    console.log(`Loaded ${workflows.length} workflows from local storage`);
-  } catch (error) {
-    console.error('Error prefetching workflows:', error);
-  }
+  console.log('Workflows prefetch skipped (web version)');
 }
 
 export default { fetchWorkflows, prefetchAndStoreWorkflows };
