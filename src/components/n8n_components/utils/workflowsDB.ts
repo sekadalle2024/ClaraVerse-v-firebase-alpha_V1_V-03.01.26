@@ -1,5 +1,3 @@
-import workflowsData from '../workflows/n8n_workflows_full.json';
-
 export interface Workflow {
   id: string;
   name: string;
@@ -12,7 +10,8 @@ export interface Workflow {
 // Fetch workflows from the local JSON file
 export async function fetchWorkflows(): Promise<Workflow[]> {
   try {
-    return workflowsData as Workflow[];
+    const workflowsData = await import('../workflows/n8n_workflows_full.json');
+    return (workflowsData.default || workflowsData) as Workflow[];
   } catch (error) {
     console.error('Error loading workflows:', error);
     return [];
