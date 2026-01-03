@@ -35,6 +35,9 @@ import {
   ChevronUp
 } from 'lucide-react';
 
+// Import logo from assets
+import logo from '../../assets/logo.png';
+
 // Import types and components
 import { 
   ClaraMessage, 
@@ -506,11 +509,11 @@ const WelcomeScreen: React.FC<{
   return (
     <div className="flex flex-col items-center justify-center h-full p-8">
       <div className="max-w-2xl w-full text-center flex flex-col items-center">
-        {/* Logo centré - Style Grok */}
+        {/* Logo centré - Style Grok - Logo carré sans forme ronde */}
         <div className="mb-6">
-          <div className="w-24 h-24 bg-gradient-to-br from-purple-500 via-pink-500 to-sakura-500 rounded-full flex items-center justify-center mx-auto shadow-lg p-4">
-            {/* Logo de l'application */}
-            <img src="/logo.png" alt="E-audit Logo" className="w-full h-full object-contain" />
+          <div className="w-24 h-24 flex items-center justify-center mx-auto">
+            {/* Logo de l'application - carré */}
+            <img src={logo} alt="E-audit Logo" className="w-full h-full object-contain" />
           </div>
         </div>
         
@@ -535,9 +538,9 @@ const LoadingScreen: React.FC<{
   return (
     <div className="flex items-center justify-center h-full p-8">
       <div className="max-w-md text-center">
-        {/* Loading Animation */}
-        <div className="w-20 h-20 bg-gradient-to-br from-purple-500 via-pink-500 to-sakura-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg animate-pulse p-3">
-          <img src="/logo.png" alt="E-audit Logo" className="w-full h-full object-contain" />
+        {/* Loading Animation - Logo carré */}
+        <div className="w-20 h-20 flex items-center justify-center mx-auto mb-6 animate-pulse">
+          <img src={logo} alt="E-audit Logo" className="w-full h-full object-contain" />
         </div>
         
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">

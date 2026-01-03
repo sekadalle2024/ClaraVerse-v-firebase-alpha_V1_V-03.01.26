@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Case 10 - Pandas avec Graphiques Chart.js</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #1e3a8a;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .test-section h3 {
+            color: #1e40af;
+            margin-top: 0;
+        }
+        .status {
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+        .status.success { background: #dcfce7; color: #166534; }
+        .status.error { background: #fee2e2; color: #991b1b; }
+        .status.info { background: #dbeafe; color: #1e40af; }
+        .status.warning { background: #fef3c7; color: #92400e; }
+        
+        /* Table de test pour déclencher Case 10 */
+        .test-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .test-table th, .test-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .test-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        #output {
+            margin-top: 30px;
+            border-top: 2px solid #e5e7eb;
+            padding-top: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        .btn.secondary {
+            background: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🐼 Test Case 10 - Pandas avec Graphiques Chart.js</h1>
+        <p class="subtitle">Vérification de l'affichage des graphiques dans Case 10</p>
+        
+        <div class="test-section">
+            <h3>📋 Instructions</h3>
+            <ol>
+                <li>Assurez-vous que le backend Python est démarré (<code>cd py_backend && python main.py</code>)</li>
+                <li>Cliquez sur "Exécuter le test" pour déclencher la détection</li>
+                <li>Vérifiez que les 4 graphiques Chart.js s'affichent correctement</li>
+            </ol>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔧 Contrôles</h3>
+            <button class="btn" onclick="runTest()">▶️ Exécuter le test</button>
+            <button class="btn secondary" onclick="checkBackend()">🔍 Vérifier Backend</button>
+            <button class="btn secondary" onclick="location.reload()">🔄 Recharger</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 Table de test (Critère: Template + Pandas)</h3>
+            <p class="status info">Cette table contient les mots-clés "Template" et "Pandas" pour déclencher Case 10</p>
+            
+            <table class="test-table min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+                <thead>
+                    <tr>
+                        <th>Template</th>
+                        <th>Flowise</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Case 10</td>
+                        <td>Pandas</td>
+                        <td>Analyse des arrondissements de Paris avec graphiques Chart.js</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div id="status-container">
+            <div class="status info">⏳ En attente d'exécution...</div>
+        </div>
+        
+        <div id="output">
+            <h3>📈 Résultat (Template injecté ici)</h3>
+            <!-- Le template sera injecté ici -->
+        </div>
+    </div>
+    
+    <!-- Charger le script de modélisation -->
+    <script src="/Modelisation_template_v2.js"></script>
+    
+    <script>
+        const statusContainer = document.getElementById('status-container');
+        
+        function addStatus(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = 'status ' + type;
+            div.textContent = message;
+            statusContainer.appendChild(div);
+        }
+        
+        async function checkBackend() {
+            addStatus('🔍 Vérification du backend Python...', 'info');
+            
+            try {
+                const response = await fetch('http://localhost:5000/pandas/analysis/complete');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success && data.data) {
+                        addStatus('✅ Backend Python opérationnel! ' + data.data.arrondissements.length + ' arrondissements', 'success');
+                        console.log('Données backend:', data.data);
+                        return true;
+                    }
+                }
+                addStatus('❌ Backend répond mais données invalides', 'error');
+                return false;
+            } catch (error) {
+                addStatus('❌ Backend non disponible: ' + error.message, 'error');
+                addStatus('💡 Démarrez le backend: cd py_backend && python main.py', 'warning');
+                return false;
+            }
+        }
+        
+        async function runTest() {
+            statusContainer.innerHTML = '';
+            addStatus('🚀 Démarrage du test Case 10...', 'info');
+            
+            // Vérifier le backend
+            const backendOk = await checkBackend();
+            
+            if (!backendOk) {
+                addStatus('⚠️ Le test continuera mais sans données du backend', 'warning');
+            }
+            
+            // Vérifier que le script est chargé
+            if (typeof window.ModelisationTemplateV2 !== 'undefined') {
+                addStatus('✅ Modelisation_template_v2.js chargé', 'success');
+                
+                // Exécuter la détection
+                addStatus('🔄 Exécution de la détection des tables...', 'info');
+                await window.ModelisationTemplateV2.execute();
+                
+                // Vérifier si un template a été injecté
+                setTimeout(() => {
+                    const containers = document.querySelectorAll('.modelisation-template-container');
+                    if (containers.length > 0) {
+                        addStatus('✅ ' + containers.length + ' template(s) injecté(s)', 'success');
+                        
+                        // Vérifier les canvas Chart.js
+                        const canvases = document.querySelectorAll('canvas');
+                        if (canvases.length > 0) {
+                            addStatus('✅ ' + canvases.length + ' canvas Chart.js trouvé(s)', 'success');
+                        } else {
+                            addStatus('⚠️ Aucun canvas Chart.js trouvé', 'warning');
+                        }
+                        
+                        // Vérifier si Chart.js est chargé
+                        if (typeof Chart !== 'undefined') {
+                            addStatus('✅ Chart.js chargé (version ' + Chart.version + ')', 'success');
+                        } else {
+                            addStatus('❌ Chart.js non chargé', 'error');
+                        }
+                    } else {
+                        addStatus('❌ Aucun template injecté', 'error');
+                    }
+                }, 2000);
+            } else {
+                addStatus('❌ Modelisation_template_v2.js non chargé', 'error');
+            }
+        }
+        
+        // Auto-exécution après chargement
+        window.addEventListener('load', () => {
+            setTimeout(runTest, 1000);
+        });
+    </script>
+</body>
+</html>

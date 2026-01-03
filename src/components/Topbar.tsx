@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Sun, Moon, Monitor, Clock, LogOut, Loader2 } from 'lucide-react';
+import { Sun, Moon, Monitor, Clock, LogOut, Loader2, FolderOpen } from 'lucide-react';
 import { useTheme, ThemeMode } from '../hooks/useTheme';
 import UserProfileButton from './common/UserProfileButton';
 import NotificationPanel from './common/NotificationPanel';
@@ -130,6 +130,25 @@ const Topbar = ({ userName, onPageChange, projectTitle, showProjectTitle = false
         )}
       </div>
       <div className="flex items-center gap-6">
+        {/* Bouton Gestion Dossier Google Drive */}
+        <button 
+          onClick={() => {
+            // Ouvrir le panneau Gestion Dossier V2
+            if ((window as any).gestionDossierMenuV2) {
+              (window as any).gestionDossierMenuV2.toggle();
+            } else if ((window as any).gestionDossierMenu) {
+              (window as any).gestionDossierMenu.toggle();
+            } else {
+              console.warn('Menu Gestion Dossier non disponible');
+            }
+          }}
+          className="p-2 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+          aria-label="Gestion électronique des documents"
+          title="Gestion Dossier Google Drive"
+        >
+          <FolderOpen className="w-5 h-5 text-gray-600 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
+        </button>
+        
         {/* Sélecteur de thème avec icônes */}
         <ThemeSelector showLabel={false} />
         

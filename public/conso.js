@@ -51,6 +51,7 @@
         this.setupGlobalEventListeners();
         this.startTableMonitoring();
         this.restoreAllTablesData(); // Restaurer les données sauvegardées
+        this.setupPasteShortcut(); // Configurer le raccourci Ctrl+V pour coller depuis Excel
         this.isInitialized = true;
         debug.log("✅ Processeur initialisé avec succès");
       });
@@ -2048,6 +2049,772 @@
       }
     }
 
+    // ==================== COPIER-COLLER DEPUIS EXCEL ====================
+
+    /**
+     * Coller des données depuis le presse-papiers (Excel/tableur) dans la table active
+     * Les données sont collées à partir de la cellule active
+     * @param {HTMLTableCellElement} startCell - Cellule de départ pour le collage
+     * @returns {Promise<{success: boolean, rowsInserted: number, cellsUpdated: number}>}
+     */
+    async pasteFromClipboard(startCell = null) {
+      debug.log("📋 Début du collage depuis le presse-papiers...");
+
+      try {
+        // 1. Vérifier si le presse-papiers est accessible
+        if (!navigator.clipboard || !navigator.clipboard.readText) {
+          debug.error("❌ API Clipboard non disponible");
+          this.showNotification("❌ Presse-papiers non accessible", "error");
+          return { success: false, rowsInserted: 0, cellsUpdated: 0 };
+        }
+
+        // 2. Lire le contenu du presse-papiers
+        const clipboardText = await navigator.clipboard.readText();
+
+        if (!clipboardText || clipboardText.trim() === "") {
+          debug.warn("⚠️ Presse-papiers vide");
+          this.showNotification("⚠️ Le presse-papiers est vide", "warning");
+          return { success: false, rowsInserted: 0, cellsUpdated: 0 };
+        }
+
+        debug.log("📝 Contenu du presse-papiers:", clipboardText.substring(0, 200) + "...");
+
+        // 3. Parser les données tabulaires (séparées par tabulations et retours à la ligne)
+        const parsedData = this.parseClipboardData(clipboardText);
+
+        if (parsedData.length === 0) {
+          debug.warn("⚠️ Aucune donnée tabulaire détectée");
+          this.showNotification("⚠️ Aucune donnée tabulaire détectée", "warning");
+          return { success: false, rowsInserted: 0, cellsUpdated: 0 };
+        }
+
+        debug.log(`📊 Données parsées: ${parsedData.length} ligne(s), ${parsedData[0]?.length || 0} colonne(s)`);
+
+        // 4. Trouver la table et la cellule de départ
+        let targetTable = null;
+        let startRow = 0;
+        let startCol = 0;
+
+        if (startCell) {
+          targetTable = this.findParentTable(startCell);
+          const position = this.getCellPosition(startCell);
+          startRow = position.row;
+          startCol = position.col;
+        } else {
+          // Chercher la cellule active ou la première table disponible
+          const activeCell = document.querySelector('.contextual-active-cell');
+          if (activeCell) {
+            targetTable = this.findParentTable(activeCell);
+            const position = this.getCellPosition(activeCell);
+            startRow = position.row;
+            startCol = position.col;
+          } else {
+            // Prendre la première table du chat
+            const tables = this.findAllTables();
+            if (tables.length > 0) {
+              targetTable = tables[0];
+              startRow = 1; // Commencer après l'en-tête
+              startCol = 0;
+            }
+          }
+        }
+
+        if (!targetTable) {
+          debug.error("❌ Aucune table cible trouvée");
+          this.showNotification("❌ Aucune table sélectionnée", "error");
+          return { success: false, rowsInserted: 0, cellsUpdated: 0 };
+        }
+
+        debug.log(`🎯 Table cible trouvée, position de départ: ligne ${startRow}, colonne ${startCol}`);
+
+        // 5. Coller les données dans la table
+        const result = this.insertClipboardDataIntoTable(targetTable, parsedData, startRow, startCol);
+
+        // 6. Sauvegarder les modifications
+        if (result.success) {
+          this.saveTableData(targetTable);
+          this.showNotification(`✅ ${result.cellsUpdated} cellule(s) collée(s), ${result.rowsInserted} ligne(s) ajoutée(s)`, "success");
+        }
+
+        return result;
+
+      } catch (error) {
+        debug.error("❌ Erreur lors du collage:", error);
+
+        // Gérer l'erreur de permission silencieusement
+        if (error.name === "NotAllowedError") {
+          debug.warn("❌ Permission refusée pour le presse-papiers");
+          this.showNotification("❌ Permission presse-papiers refusée", "error");
+        } else {
+          this.showNotification(`❌ Erreur: ${error.message}`, "error");
+        }
+
+        return { success: false, rowsInserted: 0, cellsUpdated: 0 };
+      }
+    }
+
+    /**
+     * Parser les données du presse-papiers (format Excel/tableur)
+     * @param {string} text - Texte du presse-papiers
+     * @returns {Array<Array<string>>} - Tableau 2D des données
+     */
+    parseClipboardData(text) {
+      if (!text) return [];
+
+      // Normaliser les retours à la ligne (Windows: \r\n, Mac: \r, Unix: \n)
+      const normalizedText = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+      // Séparer par lignes
+      const lines = normalizedText.split('\n');
+
+      // Parser chaque ligne (séparée par tabulations)
+      const data = [];
+
+      for (const line of lines) {
+        // Ignorer les lignes complètement vides à la fin
+        if (line.trim() === '' && data.length > 0) {
+          // Vérifier si c'est la dernière ligne vide
+          continue;
+        }
+
+        // Séparer par tabulations
+        const cells = line.split('\t');
+
+        // Nettoyer les cellules (trim)
+        const cleanedCells = cells.map(cell => cell.trim());
+
+        // Ajouter la ligne si elle contient au moins une cellule non vide
+        if (cleanedCells.some(cell => cell !== '')) {
+          data.push(cleanedCells);
+        }
+      }
+
+      return data;
+    }
+
+    /**
+     * Obtenir la position d'une cellule dans sa table
+     * @param {HTMLTableCellElement} cell - La cellule
+     * @returns {{row: number, col: number}} - Position de la cellule
+     */
+    getCellPosition(cell) {
+      if (!cell) return { row: 0, col: 0 };
+
+      const row = cell.parentElement;
+      const table = this.findParentTable(cell);
+
+      if (!row || !table) return { row: 0, col: 0 };
+
+      // Trouver l'index de la ligne
+      const allRows = Array.from(table.querySelectorAll('tr'));
+      const rowIndex = allRows.indexOf(row);
+
+      // Trouver l'index de la colonne
+      const cells = Array.from(row.querySelectorAll('td, th'));
+      const colIndex = cells.indexOf(cell);
+
+      return { row: rowIndex, col: colIndex };
+    }
+
+    /**
+     * Insérer les données du presse-papiers dans la table
+     * @param {HTMLTableElement} table - Table cible
+     * @param {Array<Array<string>>} data - Données à insérer
+     * @param {number} startRow - Ligne de départ
+     * @param {number} startCol - Colonne de départ
+     * @returns {{success: boolean, rowsInserted: number, cellsUpdated: number}}
+     */
+    insertClipboardDataIntoTable(table, data, startRow, startCol) {
+      if (!table || !data || data.length === 0) {
+        return { success: false, rowsInserted: 0, cellsUpdated: 0 };
+      }
+
+      let rowsInserted = 0;
+      let cellsUpdated = 0;
+
+      // Obtenir le tbody ou créer si nécessaire
+      let tbody = table.querySelector('tbody');
+      if (!tbody) {
+        tbody = document.createElement('tbody');
+        table.appendChild(tbody);
+      }
+
+      // Obtenir toutes les lignes de la table
+      const allRows = Array.from(table.querySelectorAll('tr'));
+      const headerRow = table.querySelector('thead tr') || allRows[0];
+      const numCols = headerRow ? headerRow.querySelectorAll('th, td').length : data[0].length;
+
+      debug.log(`📊 Table: ${allRows.length} lignes, ${numCols} colonnes`);
+      debug.log(`📋 Données à coller: ${data.length} lignes, ${data[0].length} colonnes`);
+
+      // Parcourir les données à coller
+      data.forEach((rowData, dataRowIndex) => {
+        const targetRowIndex = startRow + dataRowIndex;
+
+        // Vérifier si la ligne existe
+        let targetRow = allRows[targetRowIndex];
+
+        if (!targetRow) {
+          // Créer une nouvelle ligne
+          targetRow = document.createElement('tr');
+
+          // Créer les cellules pour la nouvelle ligne
+          for (let i = 0; i < numCols; i++) {
+            const td = document.createElement('td');
+            td.style.cssText = "border: 1px solid #d1d5db; padding: 8px 12px; background: white;";
+            td.contentEditable = true;
+            td.setAttribute("data-editable", "true");
+            targetRow.appendChild(td);
+          }
+
+          tbody.appendChild(targetRow);
+          allRows.push(targetRow);
+          rowsInserted++;
+          debug.log(`➕ Nouvelle ligne créée à l'index ${targetRowIndex}`);
+        }
+
+        // Obtenir les cellules de la ligne cible
+        const targetCells = targetRow.querySelectorAll('td');
+
+        // Coller les données dans les cellules
+        rowData.forEach((cellValue, dataColIndex) => {
+          const targetColIndex = startCol + dataColIndex;
+
+          if (targetColIndex < targetCells.length) {
+            const targetCell = targetCells[targetColIndex];
+
+            if (targetCell) {
+              // Sauvegarder l'ancienne valeur pour le log
+              const oldValue = targetCell.textContent;
+
+              // Mettre à jour la valeur
+              targetCell.textContent = cellValue;
+
+              // Appliquer un style visuel pour indiquer la modification
+              targetCell.style.backgroundColor = '#e8f5e9';
+
+              // Rendre la cellule éditable si ce n'est pas déjà le cas
+              if (!targetCell.hasAttribute('contenteditable')) {
+                targetCell.contentEditable = true;
+                targetCell.setAttribute("data-editable", "true");
+              }
+
+              cellsUpdated++;
+              debug.log(`📝 Cellule [${targetRowIndex}, ${targetColIndex}]: "${oldValue}" → "${cellValue}"`);
+            }
+          } else {
+            debug.warn(`⚠️ Colonne ${targetColIndex} hors limites (max: ${targetCells.length - 1})`);
+          }
+        });
+      });
+
+      // Réinitialiser les couleurs après un délai
+      setTimeout(() => {
+        table.querySelectorAll('td').forEach(cell => {
+          if (cell.style.backgroundColor === 'rgb(232, 245, 233)') {
+            cell.style.backgroundColor = 'white';
+          }
+        });
+      }, 2000);
+
+      debug.log(`✅ Collage terminé: ${cellsUpdated} cellules mises à jour, ${rowsInserted} lignes ajoutées`);
+
+      return { success: true, rowsInserted, cellsUpdated };
+    }
+
+    /**
+     * Afficher une notification à l'utilisateur
+     * @param {string} message - Message à afficher
+     * @param {string} type - Type de notification (success, error, warning, info)
+     */
+    showNotification(message, type = "info") {
+      const colors = {
+        success: { bg: "#28a745", text: "#ffffff" },
+        error: { bg: "#dc3545", text: "#ffffff" },
+        warning: { bg: "#ffc107", text: "#000000" },
+        info: { bg: "#17a2b8", text: "#ffffff" }
+      };
+
+      const color = colors[type] || colors.info;
+
+      const notification = document.createElement("div");
+      notification.textContent = message;
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${color.bg};
+        color: ${color.text};
+        padding: 12px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        z-index: 10000;
+        font-family: system-ui, -apple-system, sans-serif;
+        font-size: 14px;
+        opacity: 0;
+        transform: translateY(-20px);
+        transition: all 0.3s ease;
+      `;
+
+      document.body.appendChild(notification);
+
+      // Animation d'entrée
+      setTimeout(() => {
+        notification.style.opacity = "1";
+        notification.style.transform = "translateY(0)";
+      }, 10);
+
+      // Animation de sortie
+      setTimeout(() => {
+        notification.style.opacity = "0";
+        notification.style.transform = "translateY(-20px)";
+        setTimeout(() => notification.remove(), 300);
+      }, 4000);
+    }
+
+    /**
+     * Configurer l'écouteur de raccourci clavier Ctrl+V pour le collage
+     */
+    setupPasteShortcut() {
+      document.addEventListener('keydown', async (e) => {
+        // Ctrl+Shift+V pour remplacer la table entière
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'V') {
+          const activeElement = document.activeElement;
+          const isInTable = activeElement && (
+            activeElement.tagName === 'TD' ||
+            activeElement.closest('table')
+          );
+          const activeCell = document.querySelector('.contextual-active-cell');
+
+          if (isInTable || activeCell) {
+            e.preventDefault();
+            debug.log("🎹 Raccourci Ctrl+Shift+V détecté - Remplacement de table");
+
+            const table = activeCell ? this.findParentTable(activeCell) :
+              (activeElement.tagName === 'TD' ? this.findParentTable(activeElement) :
+                activeElement.closest('table'));
+
+            if (table) {
+              await this.replaceTableFromClipboard(table);
+            }
+          }
+          return;
+        }
+
+        // Ctrl+V ou Cmd+V (Mac) pour coller dans les cellules
+        if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+          // Vérifier si on est dans une table du chat
+          const activeElement = document.activeElement;
+          const isInTable = activeElement && (
+            activeElement.tagName === 'TD' ||
+            activeElement.closest('table')
+          );
+
+          // Vérifier si une cellule est sélectionnée
+          const activeCell = document.querySelector('.contextual-active-cell');
+
+          if (isInTable || activeCell) {
+            // Empêcher le comportement par défaut seulement si on est dans une table
+            e.preventDefault();
+
+            debug.log("🎹 Raccourci Ctrl+V détecté dans une table");
+
+            // Utiliser la cellule active ou l'élément actif
+            const startCell = activeCell || (activeElement.tagName === 'TD' ? activeElement : null);
+
+            await this.pasteFromClipboard(startCell);
+          }
+        }
+      });
+
+      debug.log("⌨️ Raccourcis configurés: Ctrl+V (coller), Ctrl+Shift+V (remplacer table)");
+    }
+
+    /**
+     * Remplacer intégralement une table avec les données du presse-papiers
+     * @param {HTMLTableElement} table - Table à remplacer
+     */
+    async replaceTableFromClipboard(table) {
+      debug.log("📄 Début du remplacement de table depuis le presse-papiers...");
+
+      try {
+        if (!navigator.clipboard || !navigator.clipboard.readText) {
+          debug.error("❌ API Clipboard non disponible");
+          this.showNotification("❌ Presse-papiers non accessible", "error");
+          return { success: false };
+        }
+
+        const clipboardText = await navigator.clipboard.readText();
+
+        if (!clipboardText || clipboardText.trim() === "") {
+          this.showNotification("⚠️ Le presse-papiers est vide", "warning");
+          return { success: false };
+        }
+
+        const parsedData = this.parseClipboardData(clipboardText);
+
+        if (parsedData.length < 2) {
+          this.showNotification("⚠️ Données insuffisantes (en-tête + données requis)", "warning");
+          return { success: false };
+        }
+
+        debug.log(`📊 Données parsées: ${parsedData.length} lignes, ${parsedData[0].length} colonnes`);
+
+        // Remplacement direct sans confirmation
+
+        // Sauvegarder les classes CSS
+        const tableClasses = table.className;
+        const tableStyle = table.style.cssText;
+
+        // Vider la table
+        table.innerHTML = "";
+
+        // Extraire en-têtes et données
+        const headers = parsedData[0];
+        const rowsData = parsedData.slice(1);
+
+        // Créer thead
+        const thead = document.createElement("thead");
+        const headerRow = document.createElement("tr");
+        headers.forEach(headerText => {
+          const th = document.createElement("th");
+          th.textContent = headerText || "";
+          th.style.cssText = "border: 1px solid #d1d5db; padding: 12px 16px; background: #f8f9fa; font-weight: 600;";
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        // Créer tbody
+        const tbody = document.createElement("tbody");
+        rowsData.forEach(rowData => {
+          const tr = document.createElement("tr");
+          for (let i = 0; i < headers.length; i++) {
+            const td = document.createElement("td");
+            td.textContent = rowData[i] !== undefined ? rowData[i] : "";
+            td.style.cssText = "border: 1px solid #d1d5db; padding: 8px 12px; background: white;";
+            td.contentEditable = true;
+            td.setAttribute("data-editable", "true");
+            tr.appendChild(td);
+          }
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+
+        // Restaurer les classes
+        table.className = tableClasses;
+        if (tableStyle) table.style.cssText = tableStyle;
+
+        // Effet visuel
+        table.style.outline = "3px solid #28a745";
+        setTimeout(() => { table.style.outline = ""; }, 2000);
+
+        // Sauvegarder
+        this.saveTableData(table);
+
+        this.showNotification(`✅ Table remplacée: ${headers.length} colonnes, ${rowsData.length} lignes`, "success");
+
+        return { success: true, columns: headers.length, rows: rowsData.length };
+
+      } catch (error) {
+        debug.error("❌ Erreur remplacement table:", error);
+        if (error.name === "NotAllowedError") {
+          this.showNotification("❌ Permission refusée pour le presse-papiers", "error");
+        } else {
+          this.showNotification(`❌ Erreur: ${error.message}`, "error");
+        }
+        return { success: false };
+      }
+    }
+
+    // ==================== COPIER-COLLER TABLE INTERNE ====================
+
+    /**
+     * Variable pour stocker la table copiée en mémoire
+     */
+    copiedTableData = null;
+
+    /**
+     * Copier une table entière du chat dans la mémoire interne
+     * @param {HTMLTableElement} table - Table à copier (optionnel, utilise la table active si non fourni)
+     * @returns {{success: boolean, rows: number, cols: number}}
+     */
+    copyTable(table = null) {
+      debug.log("📋 [Copy Table] Début de la copie de table...");
+
+      // Utiliser la table fournie ou chercher la table active
+      let targetTable = table;
+
+      if (!targetTable) {
+        // Chercher la table avec une cellule active
+        const activeCell = document.querySelector('.contextual-active-cell');
+        if (activeCell) {
+          targetTable = this.findParentTable(activeCell);
+        }
+      }
+
+      if (!targetTable) {
+        // Chercher la première table du chat
+        const tables = this.findAllTables();
+        if (tables.length > 0) {
+          targetTable = tables[0];
+        }
+      }
+
+      if (!targetTable) {
+        debug.error("❌ [Copy Table] Aucune table trouvée à copier");
+        this.showNotification("❌ Aucune table sélectionnée à copier", "error");
+        return { success: false, rows: 0, cols: 0 };
+      }
+
+      debug.log("🎯 [Copy Table] Table cible trouvée:", targetTable.dataset.tableId || "sans ID");
+
+      try {
+        // Extraire les données de la table
+        const tableData = {
+          timestamp: Date.now(),
+          headers: [],
+          rows: [],
+          styles: {
+            tableClass: targetTable.className,
+            tableStyle: targetTable.style.cssText
+          }
+        };
+
+        // Extraire les en-têtes
+        const headerRow = targetTable.querySelector("thead tr") || targetTable.querySelector("tr:first-child");
+        if (headerRow) {
+          const headerCells = headerRow.querySelectorAll("th, td");
+          headerCells.forEach(cell => {
+            tableData.headers.push({
+              text: cell.textContent.trim(),
+              html: cell.innerHTML,
+              style: cell.style.cssText
+            });
+          });
+        }
+
+        // Extraire les lignes de données
+        const tbody = targetTable.querySelector("tbody");
+        const dataRows = tbody
+          ? tbody.querySelectorAll("tr")
+          : Array.from(targetTable.querySelectorAll("tr")).slice(1);
+
+        dataRows.forEach(row => {
+          const rowData = [];
+          const cells = row.querySelectorAll("td");
+          cells.forEach(cell => {
+            rowData.push({
+              text: cell.textContent.trim(),
+              html: cell.innerHTML,
+              style: cell.style.cssText,
+              bgColor: cell.style.backgroundColor
+            });
+          });
+          if (rowData.length > 0) {
+            tableData.rows.push(rowData);
+          }
+        });
+
+        // Stocker les données copiées
+        this.copiedTableData = tableData;
+
+        const rowCount = tableData.rows.length;
+        const colCount = tableData.headers.length;
+
+        debug.log(`✅ [Copy Table] Table copiée: ${colCount} colonnes, ${rowCount} lignes`);
+        this.showNotification(`📋 Table copiée: ${colCount} colonnes, ${rowCount} lignes`, "success");
+
+        return { success: true, rows: rowCount, cols: colCount };
+
+      } catch (error) {
+        debug.error("❌ [Copy Table] Erreur lors de la copie:", error);
+        this.showNotification(`❌ Erreur: ${error.message}`, "error");
+        return { success: false, rows: 0, cols: 0 };
+      }
+    }
+
+    /**
+     * Coller la table copiée pour remplacer la table active
+     * @param {HTMLTableElement} table - Table cible à remplacer (optionnel, utilise la table active si non fourni)
+     * @returns {{success: boolean, rows: number, cols: number}}
+     */
+    pasteTable(table = null) {
+      debug.log("📄 [Paste Table] Début du collage de table...");
+
+      // Vérifier si une table a été copiée
+      if (!this.copiedTableData) {
+        debug.warn("⚠️ [Paste Table] Aucune table copiée en mémoire");
+        this.showNotification("⚠️ Aucune table copiée. Utilisez d'abord 'Copier table'", "warning");
+        return { success: false, rows: 0, cols: 0 };
+      }
+
+      // Utiliser la table fournie ou chercher la table active
+      let targetTable = table;
+
+      if (!targetTable) {
+        // Chercher la table avec une cellule active
+        const activeCell = document.querySelector('.contextual-active-cell');
+        if (activeCell) {
+          targetTable = this.findParentTable(activeCell);
+        }
+      }
+
+      if (!targetTable) {
+        // Chercher la première table du chat
+        const tables = this.findAllTables();
+        if (tables.length > 0) {
+          targetTable = tables[0];
+        }
+      }
+
+      if (!targetTable) {
+        debug.error("❌ [Paste Table] Aucune table cible trouvée");
+        this.showNotification("❌ Aucune table sélectionnée pour le collage", "error");
+        return { success: false, rows: 0, cols: 0 };
+      }
+
+      debug.log("🎯 [Paste Table] Table cible:", targetTable.dataset.tableId || "sans ID");
+
+      try {
+        const data = this.copiedTableData;
+
+        // Sauvegarder les classes CSS de la table cible
+        const originalClasses = targetTable.className;
+        const originalStyle = targetTable.style.cssText;
+
+        // Vider la table
+        targetTable.innerHTML = "";
+
+        // Créer le thead avec les en-têtes
+        if (data.headers.length > 0) {
+          const thead = document.createElement("thead");
+          const headerRow = document.createElement("tr");
+
+          data.headers.forEach(header => {
+            const th = document.createElement("th");
+            // Utiliser le HTML si disponible, sinon le texte
+            if (header.html && header.html !== header.text) {
+              th.innerHTML = header.html;
+            } else {
+              th.textContent = header.text || "";
+            }
+            // Appliquer le style original ou un style par défaut
+            th.style.cssText = header.style || "border: 1px solid #d1d5db; padding: 12px 16px; background: #f8f9fa; font-weight: 600; text-align: left;";
+            headerRow.appendChild(th);
+          });
+
+          thead.appendChild(headerRow);
+          targetTable.appendChild(thead);
+        }
+
+        // Créer le tbody avec les données
+        const tbody = document.createElement("tbody");
+
+        data.rows.forEach(rowData => {
+          const tr = document.createElement("tr");
+
+          // S'assurer que chaque ligne a le même nombre de cellules que l'en-tête
+          const numCols = data.headers.length || rowData.length;
+
+          for (let i = 0; i < numCols; i++) {
+            const td = document.createElement("td");
+            const cellData = rowData[i] || { text: "", html: "", style: "" };
+
+            // Utiliser le HTML si disponible et différent du texte
+            if (cellData.html && cellData.html !== cellData.text) {
+              td.innerHTML = cellData.html;
+            } else {
+              td.textContent = cellData.text || "";
+            }
+
+            // Appliquer le style original ou un style par défaut
+            td.style.cssText = cellData.style || "border: 1px solid #d1d5db; padding: 8px 12px; background: white;";
+
+            // Restaurer la couleur de fond si elle était définie
+            if (cellData.bgColor) {
+              td.style.backgroundColor = cellData.bgColor;
+            }
+
+            // Rendre la cellule éditable
+            td.contentEditable = true;
+            td.setAttribute("data-editable", "true");
+
+            tr.appendChild(td);
+          }
+
+          tbody.appendChild(tr);
+        });
+
+        targetTable.appendChild(tbody);
+
+        // Restaurer les classes CSS originales de la table cible
+        targetTable.className = originalClasses;
+        if (originalStyle) {
+          targetTable.style.cssText = originalStyle;
+        }
+
+        // Effet visuel temporaire pour indiquer le succès
+        targetTable.style.outline = "3px solid #28a745";
+        setTimeout(() => {
+          targetTable.style.outline = "";
+        }, 2000);
+
+        // Sauvegarder les modifications
+        this.saveTableData(targetTable);
+
+        // Réinstaller le détecteur de changements
+        targetTable.dataset.observerInstalled = "false";
+        this.setupTableChangeDetection(targetTable);
+
+        const rowCount = data.rows.length;
+        const colCount = data.headers.length;
+
+        debug.log(`✅ [Paste Table] Table collée: ${colCount} colonnes, ${rowCount} lignes`);
+        this.showNotification(`✅ Table collée: ${colCount} colonnes, ${rowCount} lignes`, "success");
+
+        return { success: true, rows: rowCount, cols: colCount };
+
+      } catch (error) {
+        debug.error("❌ [Paste Table] Erreur lors du collage:", error);
+        this.showNotification(`❌ Erreur: ${error.message}`, "error");
+        return { success: false, rows: 0, cols: 0 };
+      }
+    }
+
+    /**
+     * Vérifier si une table est copiée en mémoire
+     * @returns {boolean}
+     */
+    hasTableCopied() {
+      return this.copiedTableData !== null;
+    }
+
+    /**
+     * Obtenir les informations sur la table copiée
+     * @returns {Object|null}
+     */
+    getCopiedTableInfo() {
+      if (!this.copiedTableData) return null;
+
+      return {
+        timestamp: this.copiedTableData.timestamp,
+        timestampDate: new Date(this.copiedTableData.timestamp).toLocaleString("fr-FR"),
+        headers: this.copiedTableData.headers.length,
+        rows: this.copiedTableData.rows.length,
+        headerNames: this.copiedTableData.headers.map(h => h.text)
+      };
+    }
+
+    /**
+     * Effacer la table copiée de la mémoire
+     */
+    clearCopiedTable() {
+      this.copiedTableData = null;
+      debug.log("🗑️ [Copy Table] Table copiée effacée de la mémoire");
+      this.showNotification("🗑️ Table copiée effacée", "info");
+    }
+
     // Exposer les méthodes utilitaires
     getStorageInfo() {
       const allData = this.loadAllData();
@@ -2096,6 +2863,83 @@
       exportData: () => processor.exportData(),
       importData: (jsonData) => processor.importData(jsonData),
       saveNow: () => processor.autoSaveAllTables(),
+      // Nouvelle commande: Coller depuis Excel
+      pasteFromExcel: async (startCell = null) => {
+        console.log("📋 Collage depuis Excel...");
+        const result = await processor.pasteFromClipboard(startCell);
+        if (result.success) {
+          console.log(`✅ Collage réussi: ${result.cellsUpdated} cellule(s), ${result.rowsInserted} ligne(s) ajoutée(s)`);
+        } else {
+          console.log("❌ Échec du collage");
+        }
+        return result;
+      },
+      // Nouvelle commande: Remplacer table depuis Excel
+      replaceTableFromExcel: async () => {
+        console.log("📄 Remplacement de table depuis Excel...");
+        const tables = processor.findAllTables();
+        if (tables.length === 0) {
+          console.log("❌ Aucune table trouvée");
+          return { success: false };
+        }
+        // Utiliser la première table ou celle avec une cellule active
+        const activeCell = document.querySelector('.contextual-active-cell');
+        const table = activeCell ? processor.findParentTable(activeCell) : tables[0];
+        const result = await processor.replaceTableFromClipboard(table);
+        if (result.success) {
+          console.log(`✅ Table remplacée: ${result.columns} colonnes, ${result.rows} lignes`);
+        } else {
+          console.log("❌ Échec du remplacement");
+        }
+        return result;
+      },
+      // Nouvelle commande: Copier une table du chat
+      copyTable: (table = null) => {
+        console.log("📋 Copie de table...");
+        const result = processor.copyTable(table);
+        if (result.success) {
+          console.log(`✅ Table copiée: ${result.cols} colonnes, ${result.rows} lignes`);
+        } else {
+          console.log("❌ Échec de la copie");
+        }
+        return result;
+      },
+      // Nouvelle commande: Coller une table copiée
+      pasteTable: (table = null) => {
+        console.log("📄 Collage de table...");
+        const result = processor.pasteTable(table);
+        if (result.success) {
+          console.log(`✅ Table collée: ${result.cols} colonnes, ${result.rows} lignes`);
+        } else {
+          console.log("❌ Échec du collage");
+        }
+        return result;
+      },
+      // Vérifier si une table est copiée
+      hasTableCopied: () => {
+        const hasCopy = processor.hasTableCopied();
+        console.log(hasCopy ? "✅ Une table est copiée en mémoire" : "❌ Aucune table copiée");
+        return hasCopy;
+      },
+      // Obtenir les infos de la table copiée
+      getCopiedTableInfo: () => {
+        const info = processor.getCopiedTableInfo();
+        if (info) {
+          console.log("📋 Table copiée:");
+          console.log(`  - Colonnes: ${info.headers}`);
+          console.log(`  - Lignes: ${info.rows}`);
+          console.log(`  - En-têtes: ${info.headerNames.join(", ")}`);
+          console.log(`  - Copiée le: ${info.timestampDate}`);
+        } else {
+          console.log("❌ Aucune table copiée en mémoire");
+        }
+        return info;
+      },
+      // Effacer la table copiée
+      clearCopiedTable: () => {
+        processor.clearCopiedTable();
+        console.log("🗑️ Table copiée effacée");
+      },
       getStorageInfo: () => {
         const info = processor.getStorageInfo();
         console.table(info.tables);
@@ -2270,6 +3114,19 @@
   - claraverseCommands.exportData()           : Exporter les données en JSON
   - claraverseCommands.importData(json)       : Importer des données JSON
 
+📋 Copier-Coller Excel:
+  - claraverseCommands.pasteFromExcel()       : Coller depuis Excel (Ctrl+V)
+  - claraverseCommands.replaceTableFromExcel(): Remplacer table entière (Ctrl+Shift+V)
+  - Raccourci Ctrl+V: Colle à partir de la cellule active
+  - Raccourci Ctrl+Shift+V: Remplace intégralement la table (avec en-têtes)
+
+📋 Copier-Coller Table (interne):
+  - claraverseCommands.copyTable()            : Copier la table active en mémoire
+  - claraverseCommands.pasteTable()           : Coller la table copiée (remplace la table active)
+  - claraverseCommands.hasTableCopied()       : Vérifier si une table est copiée
+  - claraverseCommands.getCopiedTableInfo()   : Infos sur la table copiée
+  - claraverseCommands.clearCopiedTable()     : Effacer la table copiée de la mémoire
+
 🧪 Diagnostic:
   - claraverseCommands.testPersistence()      : Tester la persistance complète
   - claraverseCommands.forceAssignIds()       : Forcer l'attribution des IDs
@@ -2283,6 +3140,23 @@
 📋 Exemples:
   // Test de persistance
   claraverseCommands.testPersistence();
+
+  // Coller depuis Excel (après avoir copié des cellules dans Excel)
+  // 1. Cliquez sur une cellule de la table
+  // 2. Appuyez sur Ctrl+V ou utilisez:
+  claraverseCommands.pasteFromExcel();
+
+  // Remplacer une table entière depuis Excel (avec en-têtes)
+  // 1. Copiez une plage incluant les en-têtes dans Excel
+  // 2. Cliquez sur la table à remplacer
+  // 3. Appuyez sur Ctrl+Shift+V ou utilisez:
+  claraverseCommands.replaceTableFromExcel();
+
+  // Copier-Coller une table du chat vers une autre:
+  // 1. Cliquez sur la table source
+  // 2. claraverseCommands.copyTable()
+  // 3. Cliquez sur la table cible
+  // 4. claraverseCommands.pasteTable()
 
   // Sauvegarder TOUTES les tables (modelisées et standards)
   claraverseCommands.saveAllNow();
@@ -2302,6 +3176,8 @@
     debug.log(
       "💡 Tapez: claraverseCommands.help() pour voir toutes les commandes",
     );
+    debug.log("📋 Coller depuis Excel: Ctrl+V | Remplacer table: Ctrl+Shift+V");
+    debug.log("📋 Copier table: copyTable() | Coller table: pasteTable()");
     debug.log("🧪 Test de persistance: claraverseCommands.testPersistence()");
   }
 

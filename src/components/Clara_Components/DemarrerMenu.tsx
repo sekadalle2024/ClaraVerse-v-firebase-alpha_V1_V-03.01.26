@@ -394,7 +394,7 @@ const SubMenuPortal: React.FC<SubMenuPortalProps> = ({ etape, anchorRect, onMode
       className="min-w-[220px] max-w-[320px] bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 py-1 animate-in fade-in-0 zoom-in-95 duration-150"
     >
       <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
-        <div className="text-xs font-semibold text-pink-600 dark:text-pink-400">
+        <div className="text-xs font-semibold text-[#6b1102] dark:text-[#ff6b5b]">
           {etape.label}
         </div>
         {etape.norme && (
@@ -407,7 +407,7 @@ const SubMenuPortal: React.FC<SubMenuPortalProps> = ({ etape, anchorRect, onMode
         <button
           key={mode.id}
           type="button"
-          className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-pink-50 dark:hover:bg-pink-900/20 hover:text-pink-600 dark:hover:text-pink-400 transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-[#6b1102]/10 dark:hover:bg-[#6b1102]/20 hover:text-[#6b1102] dark:hover:text-[#ff6b5b] transition-colors"
           onMouseDown={(e) => {
             // Empêcher la propagation du mousedown pour éviter la fermeture
             e.stopPropagation();
@@ -534,15 +534,15 @@ const DemarrerMenu: React.FC<DemarrerMenuProps> = ({ onInsertCommand, disabled =
 
   return (
     <div className="relative">
-      {/* Bouton Démarrer */}
+      {/* Bouton Démarrer - Rouge bordeaux */}
       <button
         ref={buttonRef}
         onClick={toggleMenu}
         disabled={disabled}
         className={`flex items-center gap-2 px-3 py-2 rounded-full text-sm font-medium transition-all
           ${isOpen 
-            ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/30' 
-            : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 hover:bg-pink-100 dark:hover:bg-pink-900/30 hover:text-pink-600 dark:hover:text-pink-400'
+            ? 'bg-[#6b1102] text-white shadow-lg shadow-[#6b1102]/30' 
+            : 'bg-gray-100/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 hover:bg-[#6b1102]/10 dark:hover:bg-[#6b1102]/20 hover:text-[#6b1102] dark:hover:text-[#ff6b5b]'
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
@@ -560,8 +560,8 @@ const DemarrerMenu: React.FC<DemarrerMenuProps> = ({ onInsertCommand, disabled =
           className="absolute bottom-full mb-2 left-0 min-w-[280px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50"
           style={{ maxHeight: '70vh' }}
         >
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-pink-500 to-pink-600">
+          {/* Header - Rouge bordeaux */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-[#6b1102] to-[#8b2112]">
             <div className="flex items-center gap-2 text-white">
               <Play className="w-5 h-5 fill-white" />
               <span className="font-semibold">Menu Démarrer</span>
@@ -582,7 +582,7 @@ const DemarrerMenu: React.FC<DemarrerMenuProps> = ({ onInsertCommand, disabled =
                 <button
                   className={`w-full flex items-center gap-3 px-4 py-3 text-left text-sm font-medium transition-colors border-b border-gray-100 dark:border-gray-700/50
                     ${activeLogiciel === logiciel.id 
-                      ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400' 
+                      ? 'bg-[#6b1102]/10 dark:bg-[#6b1102]/20 text-[#6b1102] dark:text-[#ff6b5b]' 
                       : 'text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700/50'
                     }`}
                   onClick={() => {
@@ -591,11 +591,11 @@ const DemarrerMenu: React.FC<DemarrerMenuProps> = ({ onInsertCommand, disabled =
                     setEtapeAnchorRect(null);
                   }}
                 >
-                  <span className={`flex-shrink-0 ${activeLogiciel === logiciel.id ? 'text-pink-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                  <span className={`flex-shrink-0 ${activeLogiciel === logiciel.id ? 'text-[#6b1102] dark:text-[#ff6b5b]' : 'text-gray-500 dark:text-gray-400'}`}>
                     {logiciel.icon}
                   </span>
                   <span className="flex-1">{logiciel.label}</span>
-                  <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${activeLogiciel === logiciel.id ? 'rotate-90 text-pink-500' : 'text-gray-400'}`} />
+                  <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${activeLogiciel === logiciel.id ? 'rotate-90 text-[#6b1102] dark:text-[#ff6b5b]' : 'text-gray-400'}`} />
                 </button>
 
                 {/* Phases et Étapes */}
@@ -614,16 +614,16 @@ const DemarrerMenu: React.FC<DemarrerMenuProps> = ({ onInsertCommand, disabled =
                             key={etape.id}
                             className={`w-full flex items-center gap-3 px-4 py-2.5 pl-6 text-left text-sm transition-colors
                               ${activeEtape?.id === etape.id 
-                                ? 'bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400' 
+                                ? 'bg-[#6b1102]/10 dark:bg-[#6b1102]/20 text-[#6b1102] dark:text-[#ff6b5b]' 
                                 : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700'
                               }`}
                             onClick={(e) => handleEtapeClick(etape, e)}
                           >
-                            <span className={`flex-shrink-0 ${activeEtape?.id === etape.id ? 'text-pink-500' : 'text-gray-400 dark:text-gray-500'}`}>
+                            <span className={`flex-shrink-0 ${activeEtape?.id === etape.id ? 'text-[#6b1102] dark:text-[#ff6b5b]' : 'text-gray-400 dark:text-gray-500'}`}>
                               {etape.icon}
                             </span>
                             <span className="flex-1">{etape.label}</span>
-                            <ChevronRight className={`w-4 h-4 flex-shrink-0 text-gray-400 ${activeEtape?.id === etape.id ? 'text-pink-500' : ''}`} />
+                            <ChevronRight className={`w-4 h-4 flex-shrink-0 text-gray-400 ${activeEtape?.id === etape.id ? 'text-[#6b1102] dark:text-[#ff6b5b]' : ''}`} />
                           </button>
                         ))}
                       </div>

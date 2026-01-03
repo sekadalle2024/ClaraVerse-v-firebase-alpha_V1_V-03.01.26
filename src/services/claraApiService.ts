@@ -32,7 +32,10 @@ export class ClaraApiService {
   private stopExecution: boolean = false;
 
   // n8n endpoint URL
-  private n8nEndpoint = "http://localhost:5678/webhook/template";
+  //private n8nEndpoint = "http://localhost:5678/webhook/template";
+  //private n8nEndpoint = "https://barow52161.app.n8n.cloud/webhook/integration";
+   // private n8nEndpoint = "https://fetanif511.app.n8n.cloud/webhook-test/integration";
+    private n8nEndpoint = "https://fetanif511.app.n8n.cloud/webhook/integration";
     //private n8nEndpoint = http://localhost:5678/webhook/htlm_processor"";
   //  private n8nEndpoint = "http://localhost:5678/webhook/table";
    //private n8nEndpoint = "http://localhost:5678/webhook/json";
@@ -627,8 +630,22 @@ export class ClaraApiService {
         "🚀 Envoi de la requête vers n8n endpoint:",
         this.n8nEndpoint,
       );
-      console.log("📝 Message envoyé:", message);
+      console.log("📝 Message original:", message);
+      console.log("📎 Attachments:", attachments?.length || 0);
       console.log("⏱️ Timeout configuré:", this.n8nTimeout / 1000, "secondes");
+
+      // Build structured payload for n8n
+      let requestBody: any;
+      
+      if (attachments && attachments.length > 0) {
+        // Use the new structured format when attachments are present
+        const structuredData = claraAttachmentService.formatDataForN8nStructured(message, attachments);
+        requestBody = { data: structuredData };
+        console.log("📦 Structured payload for n8n:", JSON.stringify(requestBody, null, 2));
+      } else {
+        // Simple message without attachments - keep backward compatibility
+        requestBody = { question: message };
+      }
 
       // Configuration étendue pour gérer CORS et timeouts
       const controller = new AbortController();
@@ -649,7 +666,7 @@ export class ClaraApiService {
           // Headers CORS si nécessaire
           Origin: window.location.origin,
         },
-        body: JSON.stringify({ question: message }),
+        body: JSON.stringify(requestBody),
         signal: controller.signal,
         mode: "cors", // Explicitement demander CORS
         credentials: "omit", // Ne pas envoyer de credentials
@@ -776,10 +793,8 @@ export class ClaraApiService {
         content: `${errorMessage}${troubleshootingTips}\n\nPlease try again or contact support if the issue persists.`,
         timestamp: new Date(),
         metadata: {
-          error: err.message,
+          error: `${err.message} (endpoint: ${this.n8nEndpoint})`,
           errorType: err.name,
-          endpoint: this.n8nEndpoint,
-          timestamp: new Date().toISOString(),
         },
       };
     }

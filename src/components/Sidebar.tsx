@@ -3,10 +3,6 @@ import {
   MessageSquare,
   FolderOpen,
   Database,
-  Bot,
-  BookOpen,
-  Code,
-  Image,
   Settings,
   HelpCircle,
   X,
@@ -34,10 +30,6 @@ const menuItems: MenuItem[] = [
   { id: "clara", label: "Chat", icon: <MessageSquare className="w-5 h-5" /> },
   { id: "dossier", label: "Dossier", icon: <FolderOpen className="w-5 h-5" /> },
   { id: "database", label: "Database", icon: <Database className="w-5 h-5" /> },
-  { id: "agents", label: "Agents", icon: <Bot className="w-5 h-5" /> },
-  { id: "notebooks", label: "Notebooks", icon: <BookOpen className="w-5 h-5" /> },
-  { id: "lumaui", label: "LumaUI (Beta)", icon: <Code className="w-5 h-5" />, alpha: true },
-  { id: "imagegen", label: "Image Gen", icon: <Image className="w-5 h-5" />, alpha: true },
 ];
 
 const bottomMenuItems: MenuItem[] = [
@@ -89,7 +81,13 @@ const Sidebar = ({
           {filteredMenuItems.map((item) => (
             <li key={item.id}>
               <button
-                onClick={() => onPageChange(item.id)}
+                data-page={item.id}
+                onClick={() => {
+                  // Pour dossier et database, ne pas changer de page (géré par les scripts JS)
+                  if (item.id !== "dossier" && item.id !== "database") {
+                    onPageChange(item.id);
+                  }
+                }}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                   activePage === item.id
                     ? "bg-sakura-500/20 text-sakura-500"

@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Lead Balance - Import Excel</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            color: #800020;
+        }
+
+        h2 {
+            color: #333;
+            border-bottom: 2px solid #800020;
+            padding-bottom: 8px;
+        }
+
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px 16px;
+            margin: 16px 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #d1d5db;
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        th {
+            background: #800020;
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) td {
+            background: #f8f9fa;
+        }
+
+        button {
+            background: linear-gradient(135deg, #800020, #600018);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            margin: 8px 4px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #900030, #700028);
+            transform: translateY(-2px);
+        }
+
+        button.secondary {
+            background: #6c757d;
+        }
+
+        .result-container {
+            margin-top: 20px;
+            padding: 16px;
+            background: #fafafa;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            min-height: 100px;
+        }
+
+        .log {
+            background: #1a1a2e;
+            color: #00ff00;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 250px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .status {
+            padding: 10px 16px;
+            border-radius: 4px;
+            margin: 8px 0;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .file-info {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 12px;
+            border-radius: 4px;
+            margin: 12px 0;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-area {
+            border: 2px dashed #800020;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #fafafa;
+        }
+
+        .upload-area:hover {
+            background: #f0e0e5;
+            border-color: #600018;
+        }
+
+        .upload-area.dragover {
+            background: #e8d0d5;
+            border-color: #400010;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>📊 Test Lead Balance - Import Excel</h1>
+
+    <div class="test-section">
+        <h2>1. Format de fichier Excel attendu</h2>
+        <div class="info-box">
+            <strong>Le fichier Excel doit contenir 2 onglets :</strong>
+            <ul>
+                <li><strong>Onglet 1</strong> : Balance N (période actuelle)</li>
+                <li><strong>Onglet 2</strong> : Balance N-1 (période précédente)</li>
+            </ul>
+        </div>
+
+        <p><strong>Colonnes attendues dans chaque onglet :</strong></p>
+        <table>
+            <thead>
+                <tr>
+                    <th>Numéro</th>
+                    <th>Intitulé</th>
+                    <th>Ant Débit</th>
+                    <th>Ant Crédit</th>
+                    <th>Débit</th>
+                    <th>Crédit</th>
+                    <th>Solde Débit</th>
+                    <th>Solde Crédit</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>101000</td>
+                    <td>CAPITAL SOCIAL</td>
+                    <td>0</td>
+                    <td>100 000 000</td>
+                    <td>0</td>
+                    <td>14 116 101</td>
+                    <td>0</td>
+                    <td>114 116 101</td>
+                </tr>
+                <tr>
+                    <td>111000</td>
+                    <td>RESERVE LEGALE</td>
+                    <td>0</td>
+                    <td>20 000 000</td>
+                    <td>20 000 000</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td>0</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><em>Le solde net est calculé automatiquement : <strong>Solde Débit - Solde Crédit</strong></em></p>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Importer le fichier Excel</h2>
+
+        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+            <p style="font-size: 48px; margin: 0;">📁</p>
+            <p style="font-size: 18px; color: #800020; font-weight: 600;">Cliquez ou glissez-déposez votre fichier Excel
+                ici</p>
+            <p style="color: #666;">Formats acceptés : .xlsx, .xls</p>
+        </div>
+        <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFileSelect(event)">
+
+        <div id="fileInfo" class="file-info" style="display: none;">
+            <strong>📄 Fichier sélectionné :</strong> <span id="fileName"></span> (<span id="fileSize"></span>)
+        </div>
+
+        <div style="margin-top: 16px;">
+            <button onclick="processLeadBalance()">📊 Calculer Lead Balance</button>
+            <button class="secondary" onclick="testBackendConnection()">🔌 Tester Connexion</button>
+            <button class="secondary" onclick="clearResults()">🗑️ Effacer</button>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Statut</h2>
+        <div id="status" class="status info">En attente de fichier...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Résultats Lead Balance</h2>
+        <div id="results" class="result-container">
+            <p style="color: #666; text-align: center;">Les résultats apparaîtront ici après le calcul.</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Logs</h2>
+        <div id="log" class="log">Console de logs...\n</div>
+    </div>
+    <scr ipt>
+        let selectedFile = null;
+
+        function log(message) {
+        const logDiv = document.getElementById('log');
+        const timestamp = new Date().toLocaleTimeString('fr-FR');
+        logDiv.textContent += `[${timestamp}] ${message}\n`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function setStatus(message, type = 'info') {
+        const statusDiv = document.getElementById('status');
+        statusDiv.textContent = message;
+        statusDiv.className = `status ${type}`;
+        }
+
+        // Drag and drop
+        const uploadArea = document.getElementById('uploadArea');
+
+        uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+        uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+        handleFile(files[0]);
+        }
+        });
+
+        function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (file) {
+        handleFile(file);
+        }
+        }
+
+        function handleFile(file) {
+        const validExtensions = ['.xlsx', '.xls'];
+        const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
+        if (!validExtensions.includes(ext)) {
+        setStatus('❌ Format non supporté. Utilisez .xlsx ou .xls', 'error');
+        log(`❌ Format invalide: ${ext}`);
+        return;
+        }
+
+        selectedFile = file;
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = formatFileSize(file.size);
+        document.getElementById('fileInfo').style.display = 'block';
+
+        setStatus(`✅ Fichier prêt: ${file.name}`, 'success');
+        log(`📄 Fichier sélectionné: ${file.name} (${formatFileSize(file.size)})`);
+        }
+
+        function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B' ; if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB' ;
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB' ; } async function testBackendConnection() { log('🔌 Test
+            de connexion au backend...'); setStatus('Test de connexion en cours...', 'info' ); try { const
+            response=await fetch('http://127.0.0.1:5000/lead-balance/health'); if (response.ok) { const data=await
+            response.json(); log(`✅ Backend connecté: ${JSON.stringify(data)}`); setStatus('✅ Backend Python connecté
+            sur port 5000', 'success' ); } else { throw new Error(`HTTP ${response.status}`); } } catch (error) { log(`❌
+            Erreur connexion: ${error.message}`); setStatus('❌ Backend non disponible. Démarrez: python
+            main.py', 'error' ); } } async function processLeadBalance() { if (!selectedFile) { setStatus('⚠️ Veuillez
+            d\'abord sélectionner un fichier Excel', 'error' ); log('⚠️ Aucun fichier sélectionné'); return; } log(`📊
+            Traitement de ${selectedFile.name}...`); setStatus('Calcul en cours...', 'info' ); try { // Lire le fichier
+            en base64 const base64=await readFileAsBase64(selectedFile); log(`📦 Fichier encodé: ${base64.length}
+            caractères`); // Envoyer au backend const response=await
+            fetch('http://127.0.0.1:5000/lead-balance/process-excel', { method: 'POST' , headers: { 'Content-Type'
+            : 'application/json' }, body: JSON.stringify({ file_base64: base64, filename: selectedFile.name }) }); if
+            (!response.ok) { const errorData=await response.json().catch(()=> ({}));
+            throw new Error(errorData.detail || `HTTP ${response.status}`);
+            }
+
+            const result = await response.json();
+            log(`✅ Réponse reçue: ${result.message}`);
+
+            if (result.success && result.html) {
+            document.getElementById('results').innerHTML = result.html;
+            setStatus(result.message, 'success');
+
+            const totals = result.results?.totals;
+            if (totals) {
+            log(`📊 Comptes communs: ${totals.common?.count || 0}`);
+            log(`🆕 Comptes nouveaux: ${totals.only_n?.count || 0}`);
+            log(`🗑️ Comptes supprimés: ${totals.only_n_1?.count || 0}`);
+            }
+            } else {
+            throw new Error(result.message || 'Erreur inconnue');
+            }
+
+            } catch (error) {
+            log(`❌ Erreur: ${error.message}`);
+            setStatus(`❌ Erreur: ${error.message}`, 'error');
+            }
+            }
+
+            function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+            const base64 = reader.result.split(',')[1];
+            resolve(base64);
+            };
+            reader.onerror = () => reject(new Error('Erreur de lecture'));
+            reader.readAsDataURL(file);
+            });
+            }
+
+            function clearResults() {
+            document.getElementById('results').innerHTML = '<p style="color: #666; text-align: center;">Les résultats
+                apparaîtront ici après le calcul.</p>';
+            document.getElementById('log').textContent = 'Console de logs...\n';
+            document.getElementById('fileInfo').style.display = 'none';
+            selectedFile = null;
+            setStatus('En attente de fichier...', 'info');
+            log('🗑️ Résultats effacés');
+            }
+
+            // Test connexion au chargement
+            window.onload = () => {
+            log('🚀 Page de test Lead Balance chargée');
+            testBackendConnection();
+            };
+            </script>
+</body>
+
+</html>

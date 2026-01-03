@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Agent Pandas - ClaraVerse</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e0e0e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #4fc3f7;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section h2 {
+            color: #81d4fa;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4fc3f7, #29b6f6);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(79, 195, 247, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #66bb6a, #43a047);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffa726, #fb8c00);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef5350, #e53935);
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .status-success {
+            background: rgba(76, 175, 80, 0.2);
+            border: 1px solid #4caf50;
+        }
+
+        .status-error {
+            background: rgba(244, 67, 54, 0.2);
+            border: 1px solid #f44336;
+        }
+
+        .status-info {
+            background: rgba(33, 150, 243, 0.2);
+            border: 1px solid #2196f3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        th,
+        td {
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 12px;
+            text-align: left;
+        }
+
+        th {
+            background: rgba(79, 195, 247, 0.2);
+            color: #4fc3f7;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        #result-table {
+            margin-top: 20px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid #4fc3f7;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🐼 Test Agent Pandas - ClaraVerse</h1>
+
+        <!-- Status API -->
+        <div class="section">
+            <h2>📡 Status de l'API</h2>
+            <button class="btn" onclick="checkStatus()">Vérifier le status</button>
+            <button class="btn btn-success" onclick="testAgent()">Test rapide</button>
+            <div id="status-result" class="status status-info" style="display: none;"></div>
+        </div>
+
+        <!-- Table de test -->
+        <div class="section">
+            <h2>📊 Table de Test (avec colonne Ecart)</h2>
+            <div class="table-container">
+                <table id="test-table" class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg"
+                    data-table-id="test_pandas_table">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Compte</th>
+                            <th>Libelle compte</th>
+                            <th>Solde BG clôture</th>
+                            <th>Solde BG Ouverture</th>
+                            <th>Acquisitions</th>
+                            <th>Solde final théorique</th>
+                            <th>Ecart</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>211000</td>
+                            <td>Terrains</td>
+                            <td>150000</td>
+                            <td>120000</td>
+                            <td>30000</td>
+                            <td>150000</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>213100</td>
+                            <td>Constructions</td>
+                            <td>500000</td>
+                            <td>450000</td>
+                            <td>60000</td>
+                            <td>510000</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>215400</td>
+                            <td>Matériel industriel</td>
+                            <td>75000</td>
+                            <td>80000</td>
+                            <td>0</td>
+                            <td>80000</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td>218200</td>
+                            <td>Matériel de transport</td>
+                            <td>45000</td>
+                            <td>35000</td>
+                            <td>15000</td>
+                            <td>50000</td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td>218300</td>
+                            <td>Matériel de bureau</td>
+                            <td>12000</td>
+                            <td>10000</td>
+                            <td>3000</td>
+                            <td>13000</td>
+                            <td></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-success" onclick="sendToPandasAgent()">🐼 Envoyer à l'Agent Pandas</button>
+                <button class="btn btn-warning" onclick="resetTable()">🔄 Réinitialiser la table</button>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Traitement en cours par l'agent Pandas...</p>
+        </div>
+
+        <!-- Résultat -->
+        <div class="section">
+            <h2>📋 Résultat de l'Agent</h2>
+            <div id="agent-result" class="status status-info">En attente d'un traitement...</div>
+            <div id="result-table"></div>
+        </div>
+
+        <!-- Logs -->
+        <div class="section">
+            <h2>📝 Logs</h2>
+            <div id="logs" class="status status-info" style="height: 200px;"></div>
+            <button class="btn btn-danger" onclick="clearLogs()">Effacer les logs</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:5000';
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            logsDiv.innerHTML += `[${timestamp}] ${prefix} ${message}\n`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        async function checkStatus() {
+            const resultDiv = document.getElementById('status-result');
+            resultDiv.style.display = 'block';
+
+            try {
+                log('Vérification du status de l\'API...');
+                const response = await fetch(`${API_BASE}/pandas-agent/status`);
+                const data = await response.json();
+
+                resultDiv.className = 'status status-success';
+                resultDiv.innerHTML = JSON.stringify(data, null, 2);
+                log('Status récupéré avec succès', 'success');
+            } catch (error) {
+                resultDiv.className = 'status status-error';
+                resultDiv.innerHTML = `Erreur: ${error.message}\n\nAssurez-vous que le backend est démarré sur ${API_BASE}`;
+                log(`Erreur: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAgent() {
+            const resultDiv = document.getElementById('status-result');
+            resultDiv.style.display = 'block';
+
+            try {
+                log('Test rapide de l\'agent...');
+                const response = await fetch(`${API_BASE}/pandas-agent/test`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                resultDiv.className = data.success ? 'status status-success' : 'status status-error';
+                resultDiv.innerHTML = JSON.stringify(data, null, 2);
+                log(data.success ? 'Test réussi!' : 'Test échoué', data.success ? 'success' : 'error');
+            } catch (error) {
+                resultDiv.className = 'status status-error';
+                resultDiv.innerHTML = `Erreur: ${error.message}`;
+                log(`Erreur: ${error.message}`, 'error');
+            }
+        }
+
+        async function sendToPandasAgent() {
+            const table = document.getElementById('test-table');
+            const loadingDiv = document.getElementById('loading');
+            const resultDiv = document.getElementById('agent-result');
+            const resultTableDiv = document.getElementById('result-table');
+
+            loadingDiv.classList.add('active');
+            log('Envoi de la table à l\'agent Pandas...');
+
+            try {
+                const requestData = {
+                    tables: [{
+                        tableId: table.dataset.tableId || 'test_table',
+                        outerHTML: table.outerHTML
+                    }],
+                    targetTableId: table.dataset.tableId || 'test_table',
+                    action: 'calculate_ecart'
+                };
+
+                log(`Données envoyées: ${JSON.stringify(requestData).substring(0, 200)}...`);
+
+                const response = await fetch(`${API_BASE}/pandas-agent/process`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.className = 'status status-success';
+                    resultDiv.innerHTML = `✅ ${data.message}\n\nCalculs: ${JSON.stringify(data.calculations, null, 2)}`;
+
+                    // Afficher la table résultante
+                    resultTableDiv.innerHTML = `<h3 style="color: #4fc3f7; margin: 15px 0;">Table avec écarts calculés:</h3>${data.resultHTML}`;
+
+                    // Mettre à jour la table originale
+                    updateOriginalTable(data.resultHTML);
+
+                    log('Calculs effectués avec succès!', 'success');
+                } else {
+                    throw new Error(data.message || 'Erreur inconnue');
+                }
+
+            } catch (error) {
+                resultDiv.className = 'status status-error';
+                resultDiv.innerHTML = `❌ Erreur: ${error.message}`;
+                log(`Erreur: ${error.message}`, 'error');
+            } finally {
+                loadingDiv.classList.remove('active');
+            }
+        }
+
+        function updateOriginalTable(newHTML) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(newHTML, 'text/html');
+            const newTable = doc.querySelector('table');
+
+            if (newTable) {
+                const originalTable = document.getElementById('test-table');
+                const newTbody = newTable.querySelector('tbody');
+
+                if (newTbody) {
+                    const oldTbody = originalTable.querySelector('tbody');
+                    if (oldTbody) {
+                        oldTbody.innerHTML = newTbody.innerHTML;
+                    }
+                }
+
+                log('Table originale mise à jour', 'success');
+            }
+        }
+
+        function resetTable() {
+            const tbody = document.querySelector('#test-table tbody');
+            tbody.innerHTML = `
+                <tr>
+                    <td>1</td>
+                    <td>211000</td>
+                    <td>Terrains</td>
+                    <td>150000</td>
+                    <td>120000</td>
+                    <td>30000</td>
+                    <td>150000</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>2</td>
+                    <td>213100</td>
+                    <td>Constructions</td>
+                    <td>500000</td>
+                    <td>450000</td>
+                    <td>60000</td>
+                    <td>510000</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>3</td>
+                    <td>215400</td>
+                    <td>Matériel industriel</td>
+                    <td>75000</td>
+                    <td>80000</td>
+                    <td>0</td>
+                    <td>80000</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>4</td>
+                    <td>218200</td>
+                    <td>Matériel de transport</td>
+                    <td>45000</td>
+                    <td>35000</td>
+                    <td>15000</td>
+                    <td>50000</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>5</td>
+                    <td>218300</td>
+                    <td>Matériel de bureau</td>
+                    <td>12000</td>
+                    <td>10000</td>
+                    <td>3000</td>
+                    <td>13000</td>
+                    <td></td>
+                </tr>
+            `;
+            document.getElementById('result-table').innerHTML = '';
+            document.getElementById('agent-result').innerHTML = 'En attente d\'un traitement...';
+            document.getElementById('agent-result').className = 'status status-info';
+            log('Table réinitialisée', 'success');
+        }
+
+        // Initialisation
+        log('Page de test chargée');
+        log('Backend attendu sur: ' + API_BASE);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test États Financiers SYSCOHADA</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            color: #2c3e50;
+        }
+
+        .test-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        button.success {
+            background: #27ae60;
+        }
+
+        button.warning {
+            background: #f39c12;
+        }
+
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background: #3498db;
+            color: white;
+        }
+
+        #result {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>📈 Test États Financiers SYSCOHADA Révisé</h1>
+
+    <div class="test-section">
+        <h2>1. Vérifier le statut du module</h2>
+        <button onclick="checkStatus()">🔍 Vérifier Statut</button>
+        <pre id="status-result">Cliquez sur le bouton pour vérifier...</pre>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Balance de test</h2>
+        <p>Voici une balance simplifiée pour tester le calcul :</p>
+        <table id="test-balance" class="min-w-full border border-gray-200 dark:border-gray-700 rounded-lg">
+            <thead>
+                <tr>
+                    <th>Numéro</th>
+                    <th>Intitulé</th>
+                    <th>Débit Ant</th>
+                    <th>Crédit Ant</th>
+                    <th>Solde Débit</th>
+                    <th>Solde Crédit</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>101</td>
+                    <td>Capital social</td>
+                    <td>0</td>
+                    <td>50000000</td>
+                    <td>0</td>
+                    <td>50000000</td>
+                </tr>
+                <tr>
+                    <td>211</td>
+                    <td>Terrains</td>
+                    <td>15000000</td>
+                    <td>0</td>
+                    <td>15000000</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>231</td>
+                    <td>Bâtiments</td>
+                    <td>30000000</td>
+                    <td>0</td>
+                    <td>30000000</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>311</td>
+                    <td>Stocks marchandises</td>
+                    <td>8000000</td>
+                    <td>0</td>
+                    <td>10000000</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>411</td>
+                    <td>Clients</td>
+                    <td>12000000</td>
+                    <td>0</td>
+                    <td>15000000</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>401</td>
+                    <td>Fournisseurs</td>
+                    <td>0</td>
+                    <td>6000000</td>
+                    <td>0</td>
+                    <td>8000000</td>
+                </tr>
+                <tr>
+                    <td>521</td>
+                    <td>Banque</td>
+                    <td>5000000</td>
+                    <td>0</td>
+                    <td>7000000</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>701</td>
+                    <td>Ventes marchandises</td>
+                    <td>0</td>
+                    <td>45000000</td>
+                    <td>0</td>
+                    <td>55000000</td>
+                </tr>
+                <tr>
+                    <td>601</td>
+                    <td>Achats marchandises</td>
+                    <td>25000000</td>
+                    <td>0</td>
+                    <td>30000000</td>
+                    <td>0</td>
+                </tr>
+                <tr>
+                    <td>661</td>
+                    <td>Charges personnel</td>
+                    <td>8000000</td>
+                    <td>0</td>
+                    <td>10000000</td>
+                    <td>0</td>
+                </tr>
+            </tbody>
+        </table>
+        <button class="success" onclick="calculateEtatsFinanciers()">📊 Calculer États Financiers</button>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Résultats</h2>
+        <div id="result">Les résultats s'afficheront ici...</div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:5000';
+
+        async function checkStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/etats-financiers/status`);
+                const data = await response.json();
+                document.getElementById('status-result').textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                document.getElementById('status-result').textContent = `Erreur: ${error.message}\n\nAssurez-vous que le backend Python est démarré (start-backend.bat)`;
+            }
+        }
+
+        async function calculateEtatsFinanciers() {
+            try {
+                // Extraire les données de la table
+                const table = document.getElementById('test-balance');
+                const headers = [];
+                const rows = [];
+
+                table.querySelectorAll('thead th').forEach(th => headers.push(th.textContent.trim()));
+                table.querySelectorAll('tbody tr').forEach(tr => {
+                    const row = [];
+                    tr.querySelectorAll('td').forEach(td => row.push(td.textContent.trim()));
+                    rows.push(row);
+                });
+
+                console.log('Headers:', headers);
+                console.log('Rows:', rows);
+
+                const response = await fetch(`${API_BASE}/etats-financiers/calculate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        balance: { headers, rows },
+                        exercice_n: "2024",
+                        exercice_n1: "2023"
+                    })
+                });
+
+                const result = await response.json();
+                console.log('Résultat:', result);
+
+                if (result.success) {
+                    displayResults(result);
+                } else {
+                    document.getElementById('result').innerHTML = `<pre style="color: red;">${JSON.stringify(result, null, 2)}</pre>`;
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = `<pre style="color: red;">Erreur: ${error.message}</pre>`;
+            }
+        }
+
+        function displayResults(result) {
+            const formatMontant = (val) => new Intl.NumberFormat('fr-FR').format(Math.round(val || 0));
+
+            let html = '<h3>✅ États Financiers calculés avec succès!</h3>';
+
+            // Bilan Actif
+            if (result.bilan_actif) {
+                html += `<h4>🏦 ${result.bilan_actif.titre}</h4>`;
+                html += '<table><thead><tr><th>Code</th><th>Libellé</th><th>2024</th><th>2023</th></tr></thead><tbody>';
+                result.bilan_actif.rubriques.forEach(r => {
+                    html += `<tr><td>${r.code}</td><td>${r.libelle}</td><td style="text-align:right">${formatMontant(r.montant_n)}</td><td style="text-align:right">${formatMontant(r.montant_n1)}</td></tr>`;
+                });
+                html += `<tr style="font-weight:bold;background:#e8f5e9"><td colspan="2">TOTAL ACTIF</td><td style="text-align:right">${formatMontant(result.bilan_actif.total.n)}</td><td style="text-align:right">${formatMontant(result.bilan_actif.total.n1)}</td></tr>`;
+                html += '</tbody></table>';
+            }
+
+            // Bilan Passif
+            if (result.bilan_passif) {
+                html += `<h4>💰 ${result.bilan_passif.titre}</h4>`;
+                html += '<table><thead><tr><th>Code</th><th>Libellé</th><th>2024</th><th>2023</th></tr></thead><tbody>';
+                result.bilan_passif.rubriques.forEach(r => {
+                    html += `<tr><td>${r.code}</td><td>${r.libelle}</td><td style="text-align:right">${formatMontant(r.montant_n)}</td><td style="text-align:right">${formatMontant(r.montant_n1)}</td></tr>`;
+                });
+                html += `<tr style="font-weight:bold;background:#e3f2fd"><td colspan="2">TOTAL PASSIF</td><td style="text-align:right">${formatMontant(result.bilan_passif.total.n)}</td><td style="text-align:right">${formatMontant(result.bilan_passif.total.n1)}</td></tr>`;
+                html += '</tbody></table>';
+            }
+
+            // Compte de Résultat
+            if (result.compte_resultat) {
+                html += '<h4>📊 COMPTE DE RÉSULTAT</h4>';
+
+                // Produits
+                html += '<h5 style="color:#27ae60">📈 Produits</h5>';
+                html += '<table><thead><tr><th>Code</th><th>Libellé</th><th>2024</th><th>2023</th></tr></thead><tbody>';
+                result.compte_resultat.produits.rubriques.forEach(r => {
+                    html += `<tr><td>${r.code}</td><td>${r.libelle}</td><td style="text-align:right;color:#27ae60">${formatMontant(r.montant_n)}</td><td style="text-align:right">${formatMontant(r.montant_n1)}</td></tr>`;
+                });
+                html += `<tr style="font-weight:bold;background:#d5f5e3"><td colspan="2">Total Produits</td><td style="text-align:right">${formatMontant(result.compte_resultat.produits.total.n)}</td><td style="text-align:right">${formatMontant(result.compte_resultat.produits.total.n1)}</td></tr>`;
+                html += '</tbody></table>';
+
+                // Charges
+                html += '<h5 style="color:#e74c3c">📉 Charges</h5>';
+                html += '<table><thead><tr><th>Code</th><th>Libellé</th><th>2024</th><th>2023</th></tr></thead><tbody>';
+                result.compte_resultat.charges.rubriques.forEach(r => {
+                    html += `<tr><td>${r.code}</td><td>${r.libelle}</td><td style="text-align:right;color:#e74c3c">${formatMontant(r.montant_n)}</td><td style="text-align:right">${formatMontant(r.montant_n1)}</td></tr>`;
+                });
+                html += `<tr style="font-weight:bold;background:#fadbd8"><td colspan="2">Total Charges</td><td style="text-align:right">${formatMontant(result.compte_resultat.charges.total.n)}</td><td style="text-align:right">${formatMontant(result.compte_resultat.charges.total.n1)}</td></tr>`;
+                html += '</tbody></table>';
+
+                // Résultat Net
+                const resColor = result.compte_resultat.resultat.n >= 0 ? '#27ae60' : '#e74c3c';
+                html += `<div style="background:${resColor}20;padding:20px;border-radius:8px;border-left:4px solid ${resColor};margin-top:20px">`;
+                html += `<h4 style="margin:0;color:${resColor}">💎 RÉSULTAT NET</h4>`;
+                html += `<p style="font-size:24px;font-weight:bold;color:${resColor};margin:10px 0">${formatMontant(result.compte_resultat.resultat.n)} FCFA (2024)</p>`;
+                html += `<p style="color:#666">${formatMontant(result.compte_resultat.resultat.n1)} FCFA (2023)</p>`;
+                html += '</div>';
+            }
+
+            // État de Contrôle
+            if (result.etat_controle) {
+                const ctrl = result.etat_controle;
+                const eqColor = ctrl.equilibre.conforme ? '#27ae60' : '#e74c3c';
+                const covColor = ctrl.couverture.taux >= 95 ? '#27ae60' : ctrl.couverture.taux >= 80 ? '#f39c12' : '#e74c3c';
+
+                html += '<h4>🔍 ÉTAT DE CONTRÔLE DE LA BALANCE</h4>';
+
+                // Équilibre comptable
+                html += `<div style="background:${eqColor}15;padding:15px;border-radius:8px;border-left:4px solid ${eqColor};margin:10px 0">`;
+                html += `<h5 style="margin:0;color:${eqColor}">${ctrl.equilibre.conforme ? '✅' : '❌'} Équilibre Comptable</h5>`;
+                html += '<table style="margin-top:10px;width:100%">';
+                html += `<tr><td>Total Actif</td><td style="text-align:right;font-weight:bold">${formatMontant(ctrl.equilibre.total_actif)} FCFA</td></tr>`;
+                html += `<tr><td>Total Passif</td><td style="text-align:right;font-weight:bold">${formatMontant(ctrl.equilibre.total_passif)} FCFA</td></tr>`;
+                html += `<tr><td>Résultat</td><td style="text-align:right;font-weight:bold">${formatMontant(ctrl.equilibre.resultat)} FCFA</td></tr>`;
+                html += `<tr style="border-top:2px solid ${eqColor}"><td>Écart</td><td style="text-align:right;font-weight:bold;color:${eqColor}">${formatMontant(ctrl.equilibre.ecart)} FCFA</td></tr>`;
+                html += '</table>';
+                html += `<p style="font-size:12px;color:#666;margin-top:10px">Formule: ${ctrl.equilibre.formule}</p>`;
+                html += '</div>';
+
+                // Couverture
+                html += `<div style="background:${covColor}15;padding:15px;border-radius:8px;border-left:4px solid ${covColor};margin:10px 0">`;
+                html += `<h5 style="margin:0;color:${covColor}">📊 Taux de Couverture: ${ctrl.couverture.taux}%</h5>`;
+                html += `<p style="margin:10px 0">Comptes intégrés: <strong>${ctrl.couverture.comptes_integres}</strong> / ${ctrl.couverture.comptes_total}</p>`;
+                html += `<p style="margin:0">Comptes non intégrés: <strong>${ctrl.couverture.comptes_non_integres}</strong></p>`;
+                html += '</div>';
+
+                // Comptes non intégrés
+                if (ctrl.comptes_non_integres && ctrl.comptes_non_integres.detail && ctrl.comptes_non_integres.detail.length > 0) {
+                    html += '<div style="background:#f8f9fa;padding:15px;border-radius:8px;margin:10px 0">';
+                    html += `<h5 style="margin:0">📋 Comptes Non Intégrés (Impact: ${formatMontant(ctrl.comptes_non_integres.total_net)} FCFA)</h5>`;
+                    html += '<table style="margin-top:10px"><thead><tr><th>N°</th><th>Intitulé</th><th>Solde Débit</th><th>Solde Crédit</th><th>Solde Net</th></tr></thead><tbody>';
+                    ctrl.comptes_non_integres.detail.forEach(c => {
+                        const netColor = c.solde_net > 0 ? '#27ae60' : c.solde_net < 0 ? '#e74c3c' : '#666';
+                        html += `<tr><td>${c.numero}</td><td>${c.intitule}</td><td style="text-align:right">${formatMontant(c.solde_debit)}</td><td style="text-align:right">${formatMontant(c.solde_credit)}</td><td style="text-align:right;color:${netColor};font-weight:bold">${formatMontant(c.solde_net)}</td></tr>`;
+                    });
+                    html += '</tbody></table>';
+                    html += '</div>';
+                }
+
+                // Recommandations
+                if (ctrl.recommandations && ctrl.recommandations.length > 0) {
+                    html += '<div style="background:#fff3cd;padding:15px;border-radius:8px;border-left:4px solid #ffc107;margin:10px 0">';
+                    html += '<h5 style="margin:0;color:#856404">💡 Recommandations</h5>';
+                    html += '<ul style="margin:10px 0;padding-left:20px">';
+                    ctrl.recommandations.forEach(rec => {
+                        html += `<li style="margin:5px 0">${rec}</li>`;
+                    });
+                    html += '</ul>';
+                    html += '</div>';
+                }
+            }
+
+            document.getElementById('result').innerHTML = html;
+        }
+
+        // Vérifier le statut au chargement
+        checkStatus();
+    </script>
+</body>
+
+</html>

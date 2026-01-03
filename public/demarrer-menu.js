@@ -159,6 +159,28 @@
                     submenu: ['Normal', 'Avancé', 'Intelligent', 'Manuel']
                 }
             }
+        },
+        // États Financiers SYSCOHADA
+        'États Financiers': {
+            'Import Balance': {
+                '📊 Importer Balance Excel': {
+                    command: '__IMPORT_ETATS_FINANCIERS__',
+                    submenu: [],
+                    action: 'importEtatsFinanciers'
+                }
+            },
+            'Affichage': {
+                '🏦 Afficher Bilan': {
+                    command: '__SHOW_BILAN__',
+                    submenu: [],
+                    action: 'showBilan'
+                },
+                '📈 Afficher Compte de Résultat': {
+                    command: '__SHOW_COMPTE_RESULTAT__',
+                    submenu: [],
+                    action: 'showCompteResultat'
+                }
+            }
         }
     };
 
@@ -409,6 +431,29 @@
         .dark .demarrer-menu-container::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.2);
         }
+        
+        /* Animations pour notifications */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+        }
     `;
 
     // ============================================================
@@ -550,25 +595,29 @@
                 // Parcourir les items
                 for (const [itemName, itemConfig] of Object.entries(items)) {
                     const itemId = `${software}-${phase}-${itemName}`.replace(/\s+/g, '-').toLowerCase();
+                    const hasAction = itemConfig.action ? `data-action="${itemConfig.action}"` : '';
 
                     html += `
-                        <div class="demarrer-menu-item" data-item-id="${itemId}" data-command="${encodeURIComponent(itemConfig.command)}">
+                        <div class="demarrer-menu-item" data-item-id="${itemId}" data-command="${encodeURIComponent(itemConfig.command)}" ${hasAction}>
                             <span>${itemName}</span>
-                            ${createArrowRightIcon()}
+                            ${itemConfig.submenu && itemConfig.submenu.length > 0 ? createArrowRightIcon() : ''}
                         </div>
-                        <div class="demarrer-submenu" data-submenu-for="${itemId}">
                     `;
 
-                    // Sous-menu (Normal, Avancé, etc.)
-                    for (const subItem of itemConfig.submenu) {
-                        html += `
-                            <div class="demarrer-submenu-item" data-mode="${subItem}" data-command="${encodeURIComponent(itemConfig.command)}">
-                                ${subItem}
-                            </div>
-                        `;
-                    }
+                    if (itemConfig.submenu && itemConfig.submenu.length > 0) {
+                        html += `<div class="demarrer-submenu" data-submenu-for="${itemId}">`;
 
-                    html += `</div>`;
+                        // Sous-menu (Normal, Avancé, etc.)
+                        for (const subItem of itemConfig.submenu) {
+                            html += `
+                                <div class="demarrer-submenu-item" data-mode="${subItem}" data-command="${encodeURIComponent(itemConfig.command)}">
+                                    ${subItem}
+                                </div>
+                            `;
+                        }
+
+                        html += `</div>`;
+                    }
                 }
             }
 
@@ -653,6 +702,16 @@
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const itemId = item.dataset.itemId;
+                const command = decodeURIComponent(item.dataset.command);
+                const action = item.dataset.action;
+
+                // Gérer les actions spéciales
+                if (action || command.startsWith('__')) {
+                    handleSpecialAction(action || command);
+                    hideMenu();
+                    return;
+                }
+
                 const submenu = menuContainer.querySelector(`[data-submenu-for="${itemId}"]`);
 
                 // Toggle le sous-menu
@@ -661,7 +720,6 @@
                 }
 
                 // Si click direct sur l'item (pas sur le sous-menu), insérer la commande
-                const command = decodeURIComponent(item.dataset.command);
                 insertTextInChat(command);
                 hideMenu();
             });
@@ -698,6 +756,399 @@
             hideMenu();
             document.removeEventListener('click', handleOutsideClick);
         }
+    }
+
+    /**
+     * Gère les actions spéciales (import, affichage, etc.)
+     */
+    function handleSpecialAction(action) {
+        console.log('[Démarrer Menu] Action spéciale:', action);
+
+        switch (action) {
+            case '__IMPORT_ETATS_FINANCIERS__':
+            case 'importEtatsFinanciers':
+                importEtatsFinanciers();
+                break;
+            case '__SHOW_BILAN__':
+            case 'showBilan':
+                toggleEtatFinancier('bilan');
+                break;
+            case '__SHOW_COMPTE_RESULTAT__':
+            case 'showCompteResultat':
+                toggleEtatFinancier('compte-resultat');
+                break;
+            default:
+                console.warn('[Démarrer Menu] Action non reconnue:', action);
+        }
+    }
+
+    /**
+     * Import direct d'un fichier Excel Balance et calcul des États Financiers
+     */
+    async function importEtatsFinanciers() {
+        try {
+            // Créer un input file temporaire
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.xlsx,.xls,.csv';
+            input.style.display = 'none';
+            document.body.appendChild(input);
+
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) {
+                    input.remove();
+                    return;
+                }
+
+                showNotification(`📊 Import de ${file.name}...`, 'info');
+                console.log('[États Financiers] Import fichier:', file.name);
+
+                try {
+                    // Lire le fichier en base64
+                    const fileBase64 = await readFileAsBase64(file);
+
+                    // Envoyer vers l'endpoint États Financiers
+                    const response = await fetch('http://127.0.0.1:5000/etats-financiers/calculate-excel', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            file_base64: fileBase64,
+                            filename: file.name,
+                            exercice_n: "N",
+                            exercice_n1: "N-1"
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.detail || `Erreur HTTP ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    console.log('[États Financiers] Résultat:', result);
+
+                    if (result.success) {
+                        // Afficher les résultats
+                        displayEtatsFinanciersResults(result);
+                        showNotification('✅ États Financiers calculés avec succès!', 'success');
+                    } else {
+                        throw new Error(result.message || 'Erreur lors du calcul');
+                    }
+
+                } catch (error) {
+                    console.error('[États Financiers] Erreur:', error);
+                    showNotification(`❌ Erreur: ${error.message}`, 'error');
+                }
+
+                input.remove();
+            };
+
+            input.click();
+
+        } catch (error) {
+            console.error('[États Financiers] Erreur import:', error);
+            showNotification(`❌ Erreur: ${error.message}`, 'error');
+        }
+    }
+
+    /**
+     * Lit un fichier en base64
+     */
+    function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    /**
+     * Affiche les résultats des États Financiers dans le chat
+     */
+    function displayEtatsFinanciersResults(result) {
+        // Supprimer les anciens résultats
+        const existing = document.querySelector('.etats-financiers-results');
+        if (existing) existing.remove();
+
+        const container = document.createElement('div');
+        container.className = 'etats-financiers-results';
+        container.style.cssText = 'margin: 20px; padding: 16px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); border-radius: 12px; border: 2px solid #dee2e6;';
+
+        // Titre principal
+        const title = document.createElement('h2');
+        title.innerHTML = '📈 <strong>États Financiers SYSCOHADA Révisé</strong>';
+        title.style.cssText = 'margin: 0 0 20px 0; color: #2c3e50; font-size: 20px; text-align: center; padding-bottom: 10px; border-bottom: 2px solid #3498db;';
+        container.appendChild(title);
+
+        // Créer les accordéons
+        const accordionsHTML = buildEtatsFinanciersAccordions(result);
+        const accordionsDiv = document.createElement('div');
+        accordionsDiv.innerHTML = accordionsHTML;
+        container.appendChild(accordionsDiv);
+
+        // Insérer dans le chat
+        const chatContainer = document.querySelector('.prose, [class*="chat-messages"], [class*="message-list"]');
+        if (chatContainer) {
+            chatContainer.appendChild(container);
+        } else {
+            // Fallback: insérer dans le body
+            const mainContent = document.querySelector('main, .main-content, #app');
+            if (mainContent) {
+                mainContent.appendChild(container);
+            } else {
+                document.body.appendChild(container);
+            }
+        }
+
+        // Activer les accordéons
+        setupAccordions(container);
+
+        // Scroll vers les résultats
+        container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    /**
+     * Construit le HTML des accordéons
+     */
+    function buildEtatsFinanciersAccordions(result) {
+        const formatMontant = (val) => new Intl.NumberFormat('fr-FR').format(Math.round(val || 0));
+        let html = '';
+
+        // BILAN ACTIF
+        if (result.bilan_actif && result.bilan_actif.rubriques.length > 0) {
+            html += buildAccordionSection('bilan', 'BILAN ACTIF', '🏦', result.bilan_actif, result.exercice_n, result.exercice_n1, formatMontant, '#27ae60');
+        }
+
+        // BILAN PASSIF
+        if (result.bilan_passif && result.bilan_passif.rubriques.length > 0) {
+            html += buildAccordionSection('bilan', 'BILAN PASSIF', '💰', result.bilan_passif, result.exercice_n, result.exercice_n1, formatMontant, '#2980b9');
+        }
+
+        // COMPTE DE RÉSULTAT
+        if (result.compte_resultat) {
+            html += buildCompteResultatAccordion(result.compte_resultat, result.exercice_n, result.exercice_n1, formatMontant);
+        }
+
+        if (!html) {
+            html = '<div style="padding: 20px; text-align: center; color: #666;">⚠️ Aucune donnée trouvée. Vérifiez que votre Balance contient des comptes SYSCOHADA valides.</div>';
+        }
+
+        return html;
+    }
+
+    function buildAccordionSection(type, titre, icon, data, exN, exN1, formatMontant, color) {
+        let tableRows = '';
+        data.rubriques.forEach(r => {
+            tableRows += `<tr>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${r.code}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${r.libelle}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; font-weight: 500;">${formatMontant(r.montant_n)}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; color: #666;">${formatMontant(r.montant_n1)}</td>
+            </tr>`;
+        });
+
+        return `
+            <div class="ef-accordion" data-ef-type="${type}" style="margin-bottom: 12px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd;">
+                <div class="ef-accordion-header" style="background: ${color}; color: white; padding: 14px 18px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 600;">${icon} ${titre}</span>
+                    <span class="ef-arrow" style="transition: transform 0.3s;">▼</span>
+                </div>
+                <div class="ef-accordion-content" style="display: none; background: white;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                        <thead>
+                            <tr style="background: #f8f9fa;">
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid ${color};">Code</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 2px solid ${color};">Libellé</th>
+                                <th style="padding: 10px; text-align: right; border-bottom: 2px solid ${color};">${exN}</th>
+                                <th style="padding: 10px; text-align: right; border-bottom: 2px solid ${color};">${exN1}</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                        <tfoot>
+                            <tr style="background: ${color}15; font-weight: bold;">
+                                <td colspan="2" style="padding: 10px;">TOTAL</td>
+                                <td style="padding: 10px; text-align: right;">${formatMontant(data.total.n)}</td>
+                                <td style="padding: 10px; text-align: right;">${formatMontant(data.total.n1)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>`;
+    }
+
+    function buildCompteResultatAccordion(cr, exN, exN1, formatMontant) {
+        let produitsRows = '', chargesRows = '';
+
+        if (cr.produits && cr.produits.rubriques) {
+            cr.produits.rubriques.forEach(r => {
+                produitsRows += `<tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${r.code}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${r.libelle}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; color: #27ae60;">${formatMontant(r.montant_n)}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; color: #666;">${formatMontant(r.montant_n1)}</td>
+                </tr>`;
+            });
+        }
+
+        if (cr.charges && cr.charges.rubriques) {
+            cr.charges.rubriques.forEach(r => {
+                chargesRows += `<tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${r.code}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${r.libelle}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; color: #e74c3c;">${formatMontant(r.montant_n)}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd; text-align: right; color: #666;">${formatMontant(r.montant_n1)}</td>
+                </tr>`;
+            });
+        }
+
+        const resultatN = cr.resultat?.n || 0;
+        const resultatN1 = cr.resultat?.n1 || 0;
+        const resultatColor = resultatN >= 0 ? '#27ae60' : '#e74c3c';
+
+        return `
+            <div class="ef-accordion" data-ef-type="compte-resultat" style="margin-bottom: 12px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd;">
+                <div class="ef-accordion-header" style="background: #8e44ad; color: white; padding: 14px 18px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-weight: 600;">📊 COMPTE DE RÉSULTAT</span>
+                    <span class="ef-arrow" style="transition: transform 0.3s;">▼</span>
+                </div>
+                <div class="ef-accordion-content" style="display: none; background: white;">
+                    <div style="padding: 16px;">
+                        <h4 style="color: #27ae60; margin: 0 0 10px 0;">📈 PRODUITS</h4>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
+                            <thead><tr style="background: #f8f9fa;">
+                                <th style="padding: 8px; text-align: left;">Code</th>
+                                <th style="padding: 8px; text-align: left;">Libellé</th>
+                                <th style="padding: 8px; text-align: right;">${exN}</th>
+                                <th style="padding: 8px; text-align: right;">${exN1}</th>
+                            </tr></thead>
+                            <tbody>${produitsRows || '<tr><td colspan="4" style="padding: 8px; text-align: center; color: #999;">Aucun produit</td></tr>'}</tbody>
+                            <tfoot><tr style="background: #d5f5e3; font-weight: bold;">
+                                <td colspan="2" style="padding: 8px;">Total Produits</td>
+                                <td style="padding: 8px; text-align: right;">${formatMontant(cr.produits?.total?.n || 0)}</td>
+                                <td style="padding: 8px; text-align: right;">${formatMontant(cr.produits?.total?.n1 || 0)}</td>
+                            </tr></tfoot>
+                        </table>
+
+                        <h4 style="color: #e74c3c; margin: 0 0 10px 0;">📉 CHARGES</h4>
+                        <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 20px;">
+                            <thead><tr style="background: #f8f9fa;">
+                                <th style="padding: 8px; text-align: left;">Code</th>
+                                <th style="padding: 8px; text-align: left;">Libellé</th>
+                                <th style="padding: 8px; text-align: right;">${exN}</th>
+                                <th style="padding: 8px; text-align: right;">${exN1}</th>
+                            </tr></thead>
+                            <tbody>${chargesRows || '<tr><td colspan="4" style="padding: 8px; text-align: center; color: #999;">Aucune charge</td></tr>'}</tbody>
+                            <tfoot><tr style="background: #fadbd8; font-weight: bold;">
+                                <td colspan="2" style="padding: 8px;">Total Charges</td>
+                                <td style="padding: 8px; text-align: right;">${formatMontant(cr.charges?.total?.n || 0)}</td>
+                                <td style="padding: 8px; text-align: right;">${formatMontant(cr.charges?.total?.n1 || 0)}</td>
+                            </tr></tfoot>
+                        </table>
+
+                        <div style="background: linear-gradient(135deg, ${resultatColor}20, ${resultatColor}10); padding: 16px; border-radius: 8px; border-left: 4px solid ${resultatColor};">
+                            <h4 style="margin: 0; color: ${resultatColor};">💎 RÉSULTAT NET</h4>
+                            <div style="display: flex; justify-content: space-around; margin-top: 10px;">
+                                <div style="text-align: center;">
+                                    <div style="font-size: 12px; color: #666;">${exN}</div>
+                                    <div style="font-size: 24px; font-weight: bold; color: ${resultatColor};">${formatMontant(resultatN)} FCFA</div>
+                                </div>
+                                <div style="text-align: center;">
+                                    <div style="font-size: 12px; color: #666;">${exN1}</div>
+                                    <div style="font-size: 18px; color: #666;">${formatMontant(resultatN1)} FCFA</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    /**
+     * Active les accordéons
+     */
+    function setupAccordions(container) {
+        container.querySelectorAll('.ef-accordion-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const content = header.nextElementSibling;
+                const arrow = header.querySelector('.ef-arrow');
+                const isOpen = content.style.display !== 'none';
+
+                if (isOpen) {
+                    content.style.display = 'none';
+                    arrow.style.transform = 'rotate(0deg)';
+                } else {
+                    content.style.display = 'block';
+                    arrow.style.transform = 'rotate(180deg)';
+                }
+            });
+        });
+    }
+
+    /**
+     * Toggle l'affichage d'un type d'état financier
+     */
+    function toggleEtatFinancier(type) {
+        const container = document.querySelector('.etats-financiers-results');
+        if (!container) {
+            showNotification('⚠️ Importez d\'abord une Balance Excel', 'warning');
+            return;
+        }
+
+        const sections = container.querySelectorAll(`[data-ef-type="${type}"]`);
+        sections.forEach(section => {
+            const content = section.querySelector('.ef-accordion-content');
+            const arrow = section.querySelector('.ef-arrow');
+            if (content) {
+                const isOpen = content.style.display !== 'none';
+                content.style.display = isOpen ? 'none' : 'block';
+                if (arrow) arrow.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+            }
+        });
+    }
+
+    /**
+     * Affiche une notification
+     */
+    function showNotification(message, type = 'info') {
+        // Supprimer les anciennes notifications
+        document.querySelectorAll('.demarrer-notification').forEach(n => n.remove());
+
+        const notification = document.createElement('div');
+        notification.className = 'demarrer-notification';
+
+        const colors = {
+            info: '#3498db',
+            success: '#27ae60',
+            warning: '#f39c12',
+            error: '#e74c3c'
+        };
+
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: ${colors[type] || colors.info};
+            color: white;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease-out;
+        `;
+        notification.textContent = message;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
     }
 
     // ============================================================

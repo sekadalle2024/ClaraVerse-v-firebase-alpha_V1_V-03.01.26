@@ -16,6 +16,7 @@ import {
     Check,
 } from 'lucide-react';
 import {db} from '../db';
+import logo from '../assets/logo.png';
 
 interface OnboardingProps {
     onComplete: () => void;
@@ -133,23 +134,23 @@ const Onboarding = ({onComplete}: OnboardingProps) => {
     // Features of Clara
     const features = [
         {
-            title: "Privacy First",
-            description: "Your data never leaves your device unless you explicitly allow it. All processing happens locally.",
+            title: "Méthodologie par phase",
+            description: "Méthodologie par phase et étape de mission pour un audit structuré et efficace.",
             icon: <Shield className="w-8 h-8 text-sakura-500"/>
         },
         {
-            title: "Powerful AI",
-            description: "Access state-of-the-art AI models running on your own hardware through Ollama integration.",
+            title: "Conformité CRIPP 2025",
+            description: "Conformité intégrale aux normes CRIPP 2025 pour des audits professionnels.",
             icon: <Brain className="w-8 h-8 text-sakura-500"/>
         },
         {
-            title: "Visual App Builder",
-            description: "Create custom AI applications with our intuitive node-based flow builder.",
+            title: "Génération de rapports",
+            description: "Génération automatique des rapports d'audit complets et professionnels.",
             icon: <Terminal className="w-8 h-8 text-sakura-500"/>
         },
         {
-            title: "Local Storage",
-            description: "All your conversations and data are stored locally in your browser's database.",
+            title: "Exécution rapide",
+            description: "Exécutez facilement et rapidement les missions d'audit.",
             icon: <Database className="w-8 h-8 text-sakura-500"/>
         }
     ];
@@ -193,14 +194,14 @@ const Onboarding = ({onComplete}: OnboardingProps) => {
                                     <div className="flex justify-center lg:justify-start">
                                         <div className="relative">
                                             <div
-                                                className="absolute inset-0 bg-sakura-500 rounded-full blur-xl opacity-20 animate-pulse"></div>
+                                                className="absolute inset-0 bg-sakura-500 rounded-lg blur-xl opacity-20 animate-pulse"></div>
                                             <div
-                                                className="relative bg-white dark:bg-gray-800 rounded-full p-3 sm:p-4 shadow-xl">
+                                                className="relative w-16 h-16 sm:w-20 sm:h-20">
                                                 {!logoError ? (
                                                     <img
-                                                        src="/logo.png"
+                                                        src={logo}
                                                         alt="E-audit Logo"
-                                                        className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
+                                                        className="w-full h-full object-contain"
                                                         onError={() => setLogoError(true)}
                                                     />
                                                 ) : (
@@ -215,8 +216,7 @@ const Onboarding = ({onComplete}: OnboardingProps) => {
                                     </h1>
 
                                     <p className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto lg:mx-0 animate-fadeInUp delay-200 leading-relaxed">
-                                        Your privacy-first AI assistant that keeps your data local and
-                                        your conversations private.
+                                        Automatisez vos activités d'audit, risques et contrôles
                                     </p>
                                 </div>
 

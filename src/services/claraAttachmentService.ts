@@ -194,6 +194,7 @@ export class ClaraAttachmentService {
 
   /**
    * Get extracted data from attachments for sending to n8n endpoint
+   * Enhanced to include hierarchical structure for Word and PDF files
    */
   public getExtractedDataForN8N(attachments: ClaraFileAttachment[]): any {
     const extractedData: any = {
@@ -216,8 +217,19 @@ export class ClaraAttachmentService {
 
         // Add structured data if available
         if (attachment.processingResult.metadata?.extractedData) {
-          fileData.structuredData = attachment.processingResult.metadata.extractedData;
-          fileData.dataFormat = attachment.processingResult.metadata.dataFormat;
+          const dataFormat = attachment.processingResult.metadata.dataFormat;
+          
+          // For Word and PDF, use the hierarchical structure
+          if (dataFormat === 'word' || dataFormat === 'pdf') {
+            // The extractedData already contains the hierarchical structure
+            fileData.structuredData = attachment.processingResult.metadata.extractedData;
+            fileData.hierarchicalData = attachment.processingResult.metadata.extractedData;
+            console.log(`📄 ${dataFormat.toUpperCase()} hierarchical data included for:`, attachment.name);
+          } else {
+            fileData.structuredData = attachment.processingResult.metadata.extractedData;
+          }
+          
+          fileData.dataFormat = dataFormat;
           extractedData.hasExtractedContent = true;
         }
 
@@ -337,6 +349,412 @@ export class ClaraAttachmentService {
 
     console.log('🔍 DEBUG - Final Flowise data:', flowiseData);
     return flowiseData;
+  }
+
+  /**
+   * Format data for n8n endpoint according to the structured specification:
+   * - User_message: Array of key-value pairs from user input
+   * - Excel files: "filename.xlsx" with "onglet_X - table Y" structure
+   * - Word files: "filename.doc" with numbered sections
+   */
+  public formatDataForN8nStructured(userMessage: string, attachments: ClaraFileAttachment[]): any[] {
+    console.log('📦 formatDataForN8nStructured - Building structured payload');
+    const result: any[] = [];
+
+    // 1. Parse User_message from the input text
+    const userMessageObj = this.parseUserMessageToStructured(userMessage);
+    if (userMessageObj) {
+      result.push({ "User_message": userMessageObj });
+    }
+
+    // 2. Process each attachment
+    attachments.forEach(attachment => {
+      if (!attachment.processed || !attachment.processingResult?.success) {
+        console.log(`⚠️ Skipping unprocessed attachment: ${attachment.name}`);
+        return;
+      }
+
+      const fileName = attachment.name;
+      const isExcel = attachment.type === 'excel' || 
+                      fileName.toLowerCase().endsWith('.xlsx') || 
+                      fileName.toLowerCase().endsWith('.xls') ||
+                      attachment.processingResult?.metadata?.dataFormat === 'excel';
+      
+      const isWord = attachment.type === 'word' || 
+                     fileName.toLowerCase().endsWith('.doc') || 
+                     fileName.toLowerCase().endsWith('.docx');
+
+      const isPdf = attachment.type === 'pdf' || 
+                    fileName.toLowerCase().endsWith('.pdf') ||
+                    attachment.processingResult?.metadata?.dataFormat === 'pdf';
+
+      if (isExcel && attachment.processingResult.metadata?.extractedData) {
+        const excelData = this.formatExcelForN8nStructured(fileName, attachment.processingResult.metadata.extractedData);
+        if (excelData) {
+          result.push(excelData);
+        }
+      } else if (isWord && attachment.processingResult.extractedText) {
+        const wordData = this.formatWordForN8nStructured(fileName, attachment.processingResult.extractedText);
+        if (wordData) {
+          result.push(wordData);
+        }
+      } else if (isPdf && attachment.processingResult.extractedText) {
+        const pdfData = this.formatPdfForN8nStructured(fileName, attachment.processingResult.extractedText);
+        if (pdfData) {
+          result.push(pdfData);
+        }
+      }
+    });
+
+    console.log('📦 Final structured payload:', JSON.stringify(result, null, 2));
+    return result;
+  }
+
+  /**
+   * Parse user message text into structured key-value pairs
+   * Detects patterns like [Command] = value, [Processus] = value, etc.
+   */
+  private parseUserMessageToStructured(message: string): any[] | null {
+    const result: any[] = [];
+    
+    // Remove DISPLAY_META if present
+    let cleanMessage = message.replace(/\[DISPLAY_META:[\s\S]*?\]\n\n/g, '');
+    
+    // Remove file content sections
+    cleanMessage = cleanMessage.replace(/--- Content from [\s\S]*?--- End of .*? ---\n\n/g, '');
+    
+    // Extract "User Question:" part if present
+    const userQuestionMatch = cleanMessage.match(/User Question:\s*([\s\S]*?)$/);
+    if (userQuestionMatch) {
+      cleanMessage = userQuestionMatch[1].trim();
+    }
+
+    // Parse [Key] = Value patterns
+    const keyValueRegex = /\[([^\]]+)\]\s*[=:]\s*([^\[\n]*)/g;
+    let match;
+    
+    while ((match = keyValueRegex.exec(cleanMessage)) !== null) {
+      const key = `[${match[1].trim()}]`;
+      let value: string | number = match[2].trim();
+      
+      // Try to convert to number if applicable
+      if (/^\d+$/.test(value)) {
+        value = parseInt(value, 10);
+      }
+      
+      result.push({ [key]: value });
+    }
+
+    // If no structured data found, create a simple message entry
+    if (result.length === 0 && cleanMessage.trim()) {
+      result.push({ "[Message]": cleanMessage.trim() });
+    }
+
+    return result.length > 0 ? result : null;
+  }
+
+  /**
+   * Format Excel data with "onglet_X - table Y" structure
+   */
+  private formatExcelForN8nStructured(fileName: string, extractedData: any): any | null {
+    const tables: any[] = [];
+    let ongletIndex = 1;
+
+    Object.keys(extractedData).forEach(sheetName => {
+      const sheetData = extractedData[sheetName];
+      
+      if (Array.isArray(sheetData) && sheetData.length > 1) {
+        // First row is headers, rest is data
+        const headers = sheetData[0];
+        const dataRows = sheetData.slice(1);
+        
+        // Create table with "onglet_X - table Y" key
+        const tableKey = `onglet_${ongletIndex} - table 1`;
+        const tableData: any[] = [];
+        
+        dataRows.forEach((row: any[]) => {
+          if (Array.isArray(row)) {
+            const rowObj: any = {};
+            headers.forEach((header: any, colIndex: number) => {
+              const headerName = header || `col_${colIndex + 1}`;
+              rowObj[headerName] = row[colIndex] !== undefined ? row[colIndex] : '';
+            });
+            tableData.push(rowObj);
+          }
+        });
+        
+        if (tableData.length > 0) {
+          tables.push({ [tableKey]: tableData });
+        }
+        
+        ongletIndex++;
+      }
+    });
+
+    if (tables.length > 0) {
+      return { [fileName]: tables };
+    }
+    
+    return null;
+  }
+
+  /**
+   * Format Word document with hierarchical nested JSON structure
+   * Parses titles (1, 1.1, 1.1.1, a, b, etc.) and creates nested structure
+   * Paragraphs are numbered as "paragraphe_1", "paragraphe_2", etc.
+   * Tables are numbered as "table_1", "table_2", etc.
+   */
+  private formatWordForN8nStructured(fileName: string, extractedText: string): any | null {
+    console.log('📄 formatWordForN8nStructured - Processing:', fileName);
+    
+    // Clean the text
+    let cleanText = extractedText
+      .replace(/📄 Contenu extrait du document Word:.*?\n\n/g, '')
+      .trim();
+
+    // Use the hierarchical parser
+    const hierarchicalData = this.parseWordToHierarchicalJson(cleanText);
+    
+    if (hierarchicalData && Object.keys(hierarchicalData).length > 0) {
+      return { [fileName]: hierarchicalData };
+    }
+    
+    // Fallback: simple structure
+    return { [fileName]: { "paragraphe_1": cleanText } };
+  }
+
+  /**
+   * Parse Word document text into hierarchical nested JSON
+   * Detects heading patterns: 
+   * - Roman numerals (I, II, III, IV, V, etc.)
+   * - Numbers with dots (1, 1.1, 1.1.1, 2, 2.1, etc.)
+   * - Letters (a, b, c, A, B, C)
+   * - Bullet points (-, •, *)
+   */
+  private parseWordToHierarchicalJson(text: string): any {
+    console.log('🔍 parseWordToHierarchicalJson - Starting hierarchical parsing');
+    
+    // Split text into lines for processing
+    const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+    
+    if (lines.length === 0) {
+      return { "paragraphe_1": text };
+    }
+
+    // Heading detection patterns with hierarchy levels
+    const headingPatterns = [
+      // Roman numerals (Level 1): I., II., III., IV., V., VI., VII., VIII., IX., X.
+      { regex: /^(I{1,3}|IV|V|VI{0,3}|IX|X)\.\s+(.+)$/i, level: 1, type: 'roman' },
+      // Main chapters (Level 1): 1., 2., 3., etc. (single digit followed by dot)
+      { regex: /^(\d)\.\s+(.+)$/, level: 1, type: 'chapter' },
+      // Sub-sections (Level 2): 1.1, 2.1, etc.
+      { regex: /^(\d+\.\d+)\s+(.+)$/, level: 2, type: 'section' },
+      // Sub-sub-sections (Level 3): 1.1.1, 2.1.1, etc.
+      { regex: /^(\d+\.\d+\.\d+)\s+(.+)$/, level: 3, type: 'subsection' },
+      // Deep sections (Level 4): 1.1.1.1, etc.
+      { regex: /^(\d+\.\d+\.\d+\.\d+)\s+(.+)$/, level: 4, type: 'subsubsection' },
+      // Uppercase letters (Level 2): A., B., C., etc.
+      { regex: /^([A-Z])\.\s+(.+)$/, level: 2, type: 'letter_upper' },
+      // Lowercase letters (Level 3): a., b., c., etc.
+      { regex: /^([a-z])\.\s+(.+)$/, level: 3, type: 'letter_lower' },
+      // Parenthesized letters (Level 3): (a), (b), (c), etc.
+      { regex: /^\(([a-z])\)\s+(.+)$/i, level: 3, type: 'letter_paren' },
+      // Parenthesized numbers (Level 3): (1), (2), (3), etc.
+      { regex: /^\((\d+)\)\s+(.+)$/, level: 3, type: 'number_paren' },
+      // Bullet points (Level 4): -, •, *, etc.
+      { regex: /^[-•\*]\s+(.+)$/, level: 4, type: 'bullet' },
+    ];
+
+    // Table detection pattern
+    const tableStartPattern = /^\|.*\|$/;
+    const tableRowPattern = /^\|.*\|$/;
+
+    // Build hierarchical structure
+    const result: any = {};
+    const stack: { level: number; key: string; obj: any }[] = [{ level: 0, key: 'root', obj: result }];
+    
+    let paragraphCounter = 1;
+    let tableCounter = 1;
+    let currentParagraphLines: string[] = [];
+    let currentTableLines: string[] = [];
+    let inTable = false;
+
+    const flushParagraph = (targetObj: any) => {
+      if (currentParagraphLines.length > 0) {
+        const paragraphText = currentParagraphLines.join(' ').trim();
+        if (paragraphText) {
+          targetObj[`paragraphe_${paragraphCounter}`] = paragraphText;
+          paragraphCounter++;
+        }
+        currentParagraphLines = [];
+      }
+    };
+
+    const flushTable = (targetObj: any) => {
+      if (currentTableLines.length > 0) {
+        const tableData = this.parseTableFromLines(currentTableLines);
+        if (tableData.length > 0) {
+          targetObj[`table_${tableCounter}`] = tableData;
+          tableCounter++;
+        }
+        currentTableLines = [];
+        inTable = false;
+      }
+    };
+
+    const getCurrentTarget = () => {
+      return stack[stack.length - 1].obj;
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Check for table
+      if (tableStartPattern.test(line)) {
+        flushParagraph(getCurrentTarget());
+        inTable = true;
+        currentTableLines.push(line);
+        continue;
+      }
+      
+      if (inTable) {
+        if (tableRowPattern.test(line)) {
+          currentTableLines.push(line);
+          continue;
+        } else {
+          flushTable(getCurrentTarget());
+        }
+      }
+
+      // Check for headings
+      let isHeading = false;
+      for (const pattern of headingPatterns) {
+        const match = line.match(pattern.regex);
+        if (match) {
+          isHeading = true;
+          
+          // Flush any pending paragraph
+          flushParagraph(getCurrentTarget());
+          
+          // Determine heading key and content
+          let headingKey: string;
+          let headingContent: string | undefined;
+          
+          if (pattern.type === 'bullet') {
+            headingKey = match[1]; // Just the bullet content
+            headingContent = undefined;
+          } else {
+            headingKey = match[1]; // The number/letter
+            headingContent = match[2]; // The title text
+          }
+
+          // Pop stack until we find appropriate parent level
+          while (stack.length > 1 && stack[stack.length - 1].level >= pattern.level) {
+            stack.pop();
+          }
+
+          // Create new section
+          const parentObj = getCurrentTarget();
+          const sectionKey = headingContent ? `${headingKey}. ${headingContent}` : headingKey;
+          
+          // Initialize as object for nested content
+          parentObj[sectionKey] = {};
+          
+          // Push to stack
+          stack.push({ level: pattern.level, key: sectionKey, obj: parentObj[sectionKey] });
+          
+          // Reset counters for new section
+          paragraphCounter = 1;
+          tableCounter = 1;
+          
+          break;
+        }
+      }
+
+      // If not a heading, accumulate as paragraph
+      if (!isHeading && !inTable) {
+        currentParagraphLines.push(line);
+      }
+    }
+
+    // Flush remaining content
+    flushTable(getCurrentTarget());
+    flushParagraph(getCurrentTarget());
+
+    // Clean up empty objects and convert single-paragraph sections
+    this.cleanupHierarchicalStructure(result);
+
+    console.log('📄 parseWordToHierarchicalJson - Result:', JSON.stringify(result, null, 2));
+    return result;
+  }
+
+  /**
+   * Parse table lines (markdown-style) into array of objects
+   */
+  private parseTableFromLines(lines: string[]): any[] {
+    if (lines.length < 2) return [];
+
+    const result: any[] = [];
+    
+    // Parse header row
+    const headerLine = lines[0];
+    const headers = headerLine.split('|')
+      .map(cell => cell.trim())
+      .filter(cell => cell.length > 0);
+
+    // Skip separator line if present (e.g., |---|---|)
+    let dataStartIndex = 1;
+    if (lines.length > 1 && /^[\|\-\s:]+$/.test(lines[1])) {
+      dataStartIndex = 2;
+    }
+
+    // Parse data rows
+    for (let i = dataStartIndex; i < lines.length; i++) {
+      const cells = lines[i].split('|')
+        .map(cell => cell.trim())
+        .filter(cell => cell.length > 0);
+      
+      if (cells.length > 0) {
+        const rowObj: any = {};
+        headers.forEach((header, index) => {
+          rowObj[header] = cells[index] || '';
+        });
+        result.push(rowObj);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Clean up hierarchical structure:
+   * - Remove empty objects
+   * - Convert objects with only one paragraph to string value
+   */
+  private cleanupHierarchicalStructure(obj: any): void {
+    if (typeof obj !== 'object' || obj === null) return;
+
+    const keys = Object.keys(obj);
+    
+    for (const key of keys) {
+      const value = obj[key];
+      
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        // Recursively clean nested objects
+        this.cleanupHierarchicalStructure(value);
+        
+        const valueKeys = Object.keys(value);
+        
+        // Remove empty objects
+        if (valueKeys.length === 0) {
+          delete obj[key];
+        }
+        // Convert single paragraph to direct string value
+        else if (valueKeys.length === 1 && valueKeys[0] === 'paragraphe_1') {
+          obj[key] = value['paragraphe_1'];
+        }
+      }
+    }
   }
 
   /**
@@ -463,13 +881,9 @@ export class ClaraAttachmentService {
       } else if (attachment.type === 'word' || fileExtension === 'docx') {
         console.log('🔍 DEBUG - Routing to Word extraction');
         return await this.extractWordContent(attachment);
-      } else if (fileExtension === 'pdf') {
-        console.log('🔍 DEBUG - PDF type not implemented yet');
-        return {
-          success: false,
-          text: '',
-          error: 'PDF extraction not implemented in this service'
-        };
+      } else if (attachment.type === 'pdf' || fileExtension === 'pdf') {
+        console.log('🔍 DEBUG - Routing to PDF extraction');
+        return await this.extractPdfContent(attachment);
       } else {
         console.log('🔍 DEBUG - Unsupported document type:', fileExtension, 'attachment type:', attachment.type);
         return {
@@ -587,6 +1001,7 @@ export class ClaraAttachmentService {
 
   /**
    * Extract content from Word documents (.docx)
+   * Enhanced to extract structured content including tables
    */
   private async extractWordContent(attachment: ClaraFileAttachment): Promise<{
     success: boolean;
@@ -597,14 +1012,14 @@ export class ClaraAttachmentService {
   }> {
     try {
       // Convert base64 to binary
-      const binaryString = atob(attachment.base64!.split(',')[1] || attachment.base64!);
+      const base64Data = attachment.base64!.includes(',') ? attachment.base64!.split(',')[1] : attachment.base64!;
+      const binaryString = atob(base64Data);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
 
-      // For Word documents, we'll use a simple approach to extract text
-      // Note: This is a basic implementation. For full Word parsing, we'd need mammoth.js
+      // For Word documents, we'll use JSZip to extract content
       const JSZip = await import('jszip');
       const zip = await JSZip.default.loadAsync(bytes);
       
@@ -619,19 +1034,16 @@ export class ClaraAttachmentService {
         };
       }
 
-      // Simple text extraction from XML (removes tags)
-      let extractedText = documentXml
-        .replace(/<[^>]*>/g, ' ') // Remove XML tags
-        .replace(/\s+/g, ' ') // Normalize whitespace
-        .trim();
-
-      // Format the output
-      const formattedText = `📄 Contenu extrait du document Word: ${attachment.name}\n\n${extractedText}`;
+      // Parse the XML to extract structured content
+      const structuredContent = this.parseWordXmlToStructured(documentXml);
+      
+      // Format the output text
+      const formattedText = `📄 Contenu extrait du document Word: ${attachment.name}\n\n${structuredContent.text}`;
 
       return {
         success: true,
         text: formattedText,
-        data: { rawText: extractedText },
+        data: structuredContent.data,
         format: 'word'
       };
     } catch (error) {
@@ -642,6 +1054,358 @@ export class ClaraAttachmentService {
         error: error instanceof Error ? error.message : 'Word extraction failed'
       };
     }
+  }
+
+  /**
+   * Extract content from PDF files (.pdf)
+   * Uses pdfjs-dist to extract text and structure it hierarchically
+   */
+  private async extractPdfContent(attachment: ClaraFileAttachment): Promise<{
+    success: boolean;
+    text: string;
+    data?: any;
+    format?: string;
+    error?: string;
+  }> {
+    console.log('📄 DEBUG - extractPdfContent called for:', attachment.name);
+    
+    try {
+      // Convert base64 to binary
+      const base64Data = attachment.base64!.includes(',') ? attachment.base64!.split(',')[1] : attachment.base64!;
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      // Import pdfjs-dist dynamically
+      const pdfjsLib = await import('pdfjs-dist');
+      
+      // Set worker source - use CDN for browser compatibility
+      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+      // Load the PDF document
+      const loadingTask = pdfjsLib.getDocument({ data: bytes });
+      const pdfDoc = await loadingTask.promise;
+      
+      console.log(`📄 DEBUG - PDF loaded, pages: ${pdfDoc.numPages}`);
+
+      // Extract text from all pages
+      const pageTexts: string[] = [];
+      const allTextItems: Array<{text: string, fontSize: number, fontName: string, y: number, page: number}> = [];
+      
+      for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+        const page = await pdfDoc.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        
+        let pageText = '';
+        let lastY: number | null = null;
+        
+        textContent.items.forEach((item: any) => {
+          if ('str' in item) {
+            const text = item.str;
+            const transform = item.transform;
+            const y = transform ? transform[5] : 0;
+            const fontSize = transform ? Math.abs(transform[0]) : 12;
+            const fontName = item.fontName || '';
+            
+            // Detect line breaks based on Y position change
+            if (lastY !== null && Math.abs(y - lastY) > 5) {
+              pageText += '\n';
+            }
+            
+            pageText += text;
+            lastY = y;
+            
+            // Store text items with metadata for structure detection
+            if (text.trim()) {
+              allTextItems.push({
+                text: text.trim(),
+                fontSize,
+                fontName,
+                y,
+                page: pageNum
+              });
+            }
+          }
+        });
+        
+        pageTexts.push(pageText);
+      }
+
+      // Combine all pages
+      const fullText = pageTexts.join('\n\n--- Page Break ---\n\n');
+      
+      // Parse into hierarchical structure (same as Word)
+      const hierarchicalData = this.parsePdfToHierarchicalJson(fullText, allTextItems);
+      
+      // Format the output text
+      const formattedText = `📄 Contenu extrait du document PDF: ${attachment.name}\n\n${fullText}`;
+
+      console.log('📄 DEBUG - PDF extraction complete');
+      
+      return {
+        success: true,
+        text: formattedText,
+        data: hierarchicalData,
+        format: 'pdf'
+      };
+    } catch (error) {
+      console.error('📄 DEBUG - Error extracting PDF content:', error);
+      return {
+        success: false,
+        text: '',
+        error: error instanceof Error ? error.message : 'PDF extraction failed'
+      };
+    }
+  }
+
+  /**
+   * Parse PDF text into hierarchical nested JSON
+   * Similar to Word parsing but adapted for PDF structure
+   */
+  private parsePdfToHierarchicalJson(
+    text: string, 
+    _textItems: Array<{text: string, fontSize: number, fontName: string, y: number, page: number}>
+  ): any {
+    console.log('🔍 parsePdfToHierarchicalJson - Starting hierarchical parsing');
+    
+    // Use the same hierarchical parser as Word documents
+    // The text structure should be similar after extraction
+    // Note: _textItems can be used in the future for font-size based heading detection
+    return this.parseWordToHierarchicalJson(text);
+  }
+
+  /**
+   * Format PDF data for n8n endpoint with hierarchical structure
+   */
+  private formatPdfForN8nStructured(fileName: string, extractedText: string): any | null {
+    console.log('📄 formatPdfForN8nStructured - Processing:', fileName);
+    
+    // Clean the text
+    let cleanText = extractedText
+      .replace(/📄 Contenu extrait du document PDF:.*?\n\n/g, '')
+      .replace(/--- Page Break ---/g, '\n')
+      .trim();
+
+    // Use the same hierarchical parser as Word
+    const hierarchicalData = this.parseWordToHierarchicalJson(cleanText);
+    
+    if (hierarchicalData && Object.keys(hierarchicalData).length > 0) {
+      return { [fileName]: hierarchicalData };
+    }
+    
+    // Fallback: simple structure
+    return { [fileName]: { "paragraphe_1": cleanText } };
+  }
+
+  /**
+   * Parse Word XML to extract structured content with headings and tables
+   */
+  private parseWordXmlToStructured(xml: string): { text: string; data: any } {
+    const textParts: string[] = [];
+    
+    // Regex patterns for parsing
+    const styleRegex = /<w:pStyle\s+w:val="([^"]+)"/;
+    const outlineLvlRegex = /<w:outlineLvl\s+w:val="(\d+)"/;
+    
+    // First pass: extract all content in order
+    const contentBlocks: Array<{type: 'paragraph' | 'table' | 'heading', content: any, level?: number}> = [];
+    
+    // Find all paragraphs and tables in order
+    const combinedRegex = /<w:p[^>]*>[\s\S]*?<\/w:p>|<w:tbl>[\s\S]*?<\/w:tbl>/g;
+    let match;
+    
+    while ((match = combinedRegex.exec(xml)) !== null) {
+      const content = match[0];
+      
+      if (content.startsWith('<w:tbl>')) {
+        // Parse table
+        const tableData = this.parseWordTable(content);
+        if (tableData.length > 0) {
+          contentBlocks.push({ type: 'table', content: tableData });
+        }
+      } else {
+        // Parse paragraph
+        const styleMatch = content.match(styleRegex);
+        const outlineMatch = content.match(outlineLvlRegex);
+        
+        // Extract text from paragraph
+        let paragraphText = '';
+        let textMatch;
+        const textRegexLocal = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+        while ((textMatch = textRegexLocal.exec(content)) !== null) {
+          paragraphText += textMatch[1];
+        }
+        
+        paragraphText = paragraphText.trim();
+        
+        if (paragraphText) {
+          // Check if it's a heading
+          const style = styleMatch ? styleMatch[1] : '';
+          const outlineLevel = outlineMatch ? parseInt(outlineMatch[1]) : -1;
+          
+          const isHeading = style.toLowerCase().includes('heading') || 
+                           style.toLowerCase().includes('titre') ||
+                           outlineLevel >= 0;
+          
+          if (isHeading) {
+            const level = outlineLevel >= 0 ? outlineLevel + 1 : this.getHeadingLevelFromStyle(style);
+            contentBlocks.push({ type: 'heading', content: paragraphText, level });
+          } else {
+            contentBlocks.push({ type: 'paragraph', content: paragraphText });
+          }
+        }
+      }
+    }
+
+    // Build hierarchical structure from content blocks
+    const hierarchicalResult = this.buildHierarchyFromBlocks(contentBlocks);
+    
+    // Build text representation
+    contentBlocks.forEach(block => {
+      if (block.type === 'heading') {
+        const prefix = '#'.repeat(block.level || 1);
+        textParts.push(`\n${prefix} ${block.content}\n`);
+      } else if (block.type === 'paragraph') {
+        textParts.push(block.content);
+      } else if (block.type === 'table') {
+        textParts.push('\n[Table]\n' + this.tableToText(block.content) + '\n');
+      }
+    });
+
+    return {
+      text: textParts.join('\n'),
+      data: hierarchicalResult
+    };
+  }
+
+  /**
+   * Parse a Word table XML to array of objects
+   */
+  private parseWordTable(tableXml: string): any[] {
+    const rows: any[] = [];
+    const rowRegex = /<w:tr[^>]*>([\s\S]*?)<\/w:tr>/g;
+    
+    let headers: string[] = [];
+    let isFirstRow = true;
+    let rowMatch;
+    
+    while ((rowMatch = rowRegex.exec(tableXml)) !== null) {
+      const rowContent = rowMatch[1];
+      const cells: string[] = [];
+      let cellMatch;
+      
+      const cellRegexLocal = /<w:tc[^>]*>([\s\S]*?)<\/w:tc>/g;
+      while ((cellMatch = cellRegexLocal.exec(rowContent)) !== null) {
+        const cellContent = cellMatch[1];
+        let cellText = '';
+        let textMatch;
+        const textRegexLocal = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+        while ((textMatch = textRegexLocal.exec(cellContent)) !== null) {
+          cellText += textMatch[1];
+        }
+        cells.push(cellText.trim());
+      }
+      
+      if (isFirstRow) {
+        headers = cells.map((cell, index) => cell || `col_${index + 1}`);
+        isFirstRow = false;
+      } else {
+        const rowObj: any = {};
+        headers.forEach((header, index) => {
+          rowObj[header] = cells[index] || '';
+        });
+        rows.push(rowObj);
+      }
+    }
+    
+    return rows;
+  }
+
+  /**
+   * Get heading level from Word style name
+   */
+  private getHeadingLevelFromStyle(style: string): number {
+    const match = style.match(/(\d+)/);
+    if (match) {
+      return parseInt(match[1]);
+    }
+    if (style.toLowerCase().includes('title') || style.toLowerCase().includes('titre')) {
+      return 1;
+    }
+    return 2;
+  }
+
+  /**
+   * Build hierarchical structure from content blocks
+   */
+  private buildHierarchyFromBlocks(blocks: Array<{type: string, content: any, level?: number}>): any {
+    const result: any = {};
+    const stack: Array<{level: number, obj: any}> = [{ level: 0, obj: result }];
+    
+    let paragraphCounter = 1;
+    let tableCounter = 1;
+    
+    const getCurrentTarget = () => stack[stack.length - 1].obj;
+    
+    blocks.forEach(block => {
+      if (block.type === 'heading') {
+        const level = block.level || 1;
+        
+        // Pop stack until we find appropriate parent
+        while (stack.length > 1 && stack[stack.length - 1].level >= level) {
+          stack.pop();
+        }
+        
+        const parent = getCurrentTarget();
+        const headingKey = block.content;
+        parent[headingKey] = {};
+        
+        stack.push({ level, obj: parent[headingKey] });
+        
+        // Reset counters for new section
+        paragraphCounter = 1;
+        tableCounter = 1;
+        
+      } else if (block.type === 'paragraph') {
+        const target = getCurrentTarget();
+        target[`paragraphe_${paragraphCounter}`] = block.content;
+        paragraphCounter++;
+        
+      } else if (block.type === 'table') {
+        const target = getCurrentTarget();
+        target[`table_${tableCounter}`] = block.content;
+        tableCounter++;
+      }
+    });
+    
+    // Clean up the structure
+    this.cleanupHierarchicalStructure(result);
+    
+    return result;
+  }
+
+  /**
+   * Convert table data to text representation
+   */
+  private tableToText(tableData: any[]): string {
+    if (tableData.length === 0) return '';
+    
+    const headers = Object.keys(tableData[0]);
+    const lines: string[] = [];
+    
+    // Header row
+    lines.push('| ' + headers.join(' | ') + ' |');
+    lines.push('| ' + headers.map(() => '---').join(' | ') + ' |');
+    
+    // Data rows
+    tableData.forEach(row => {
+      const cells = headers.map(h => String(row[h] || ''));
+      lines.push('| ' + cells.join(' | ') + ' |');
+    });
+    
+    return lines.join('\n');
   }
 }
 

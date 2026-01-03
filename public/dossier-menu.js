@@ -1,555 +1,865 @@
-// Menu Dossier - Barre latérale accordéon pour les tables des messages LLM
-// Version 2.0 - VRAI accordéon avec signes + et affichage complet des tables
+/**
+ * Dossier Mission Audit - Menu TreeView V2
+ * 
+ * Ce script crée un panneau coulissant avec une structure TreeView
+ * pour organiser les messages du chat selon la structure d'un dossier
+ * de mission d'audit interne.
+ * 
+ * Fonctionnalités:
+ * - Panneau coulissant à droite (50% de l'écran)
+ * - Structure TreeView selon l'organisation d'audit
+ * - Analyse automatique des messages LLM pour classification
+ * - Navigation vers les messages correspondants
+ * - Icônes et métadonnées pour chaque item
+ */
 
 (function () {
-    "use strict";
+    'use strict';
 
-    class DossierMenuManager {
+    console.log('📁 Dossier Mission Audit - Initialisation...');
+
+    // ========================================
+    // CONFIGURATION
+    // ========================================
+    const CONFIG = {
+        panelId: 'dossier-mission-panel',
+        overlayId: 'dossier-mission-overlay',
+        debugMode: true
+    };
+
+    // Icône pour les documents
+    const DOC_ICON = '📄';
+
+    // Structure du dossier de mission d'audit
+    const STRUCTURE_DOSSIER = [
+        {
+            id: 'demarrer',
+            label: 'Dossier Démarrer',
+            icon: '📁',
+            children: []
+        },
+        {
+            id: 'guide',
+            label: 'Dossier Guide',
+            icon: '📁',
+            children: []
+        },
+        {
+            id: 'exercice',
+            label: 'Dossier Exercice',
+            icon: '📁',
+            children: []
+        },
+        {
+            id: 'preparation',
+            label: 'Phase de préparation',
+            icon: '📂',
+            expanded: true,
+            children: [
+                { id: 'plan-pluriannuel', label: 'Plan pluri-annuel d\'audit interne', icon: '📁' },
+                { id: 'planification', label: 'Planification de la mission', icon: '📁' },
+                { id: 'lettre-mission', label: 'Lettre de mission', icon: '📁' },
+                { id: 'rencontre-direction', label: 'Rencontre avec la Direction de l\'entité auditée', icon: '📁' },
+                { id: 'compte-rendu', label: 'Compte rendu de la réunion', icon: '📁' },
+                { id: 'reunion-ouverture', label: 'Réunion d\'ouverture', icon: '📁' },
+                { id: 'collecte-documentaire', label: 'Collecte documentaire (prise de connaissance du Domaine audité)', icon: '📁' },
+                { id: 'cartographie-risques', label: 'Cartographie des risques', icon: '📁' },
+                { id: 'plan-approche', label: 'Plan d\'approche – référentiel de contrôle interne', icon: '📁' },
+                { id: 'qci', label: 'Questionnaire de contrôle interne', icon: '📁' },
+                { id: 'tffa', label: 'Tableau des forces et faiblesses apparentes', icon: '📁' },
+                { id: 'rapport-orientation', label: 'Le rapport d\'orientation', icon: '📁' },
+                {
+                    id: 'programme-travail',
+                    label: 'Le programme de travail',
+                    icon: '📂',
+                    expanded: true,
+                    children: [
+                        { id: 'pt-etape', label: 'Etape de mission - Programme de travail', icon: DOC_ICON },
+                        { id: 'pt-norme', label: 'Norme - 13.6 Programme de travail', icon: DOC_ICON },
+                        { id: 'pt-methode', label: 'Méthode - Méthode des contrôles clés par les risques', icon: DOC_ICON },
+                        { id: 'pt-reference', label: 'Reference - Programme-001', icon: DOC_ICON }
+                    ]
+                },
+                { id: 'qci-programme', label: 'Le questionnaire de contrôle interne du programme de travail', icon: '📁' }
+            ]
+        },
+        {
+            id: 'realisation',
+            label: 'Phase de réalisation',
+            icon: '📂',
+            expanded: true,
+            children: [
+                { id: 'feuille-couverture', label: 'Feuille couverture', icon: '📁' }
+            ]
+        },
+        {
+            id: 'conclusion',
+            label: 'Phase de conclusion',
+            icon: '📂',
+            expanded: true,
+            children: [
+                { id: 'frap', label: 'LA FRAP = Feuille de Révélation et d\'Analyse de Problème', icon: '📁' },
+                { id: 'synthese-frap', label: 'La synthèse des FRAP', icon: '📁' },
+                { id: 'rapport-provisoire', label: 'Le rapport provisoire', icon: '📁' },
+                { id: 'reunion-cloture', label: 'La réunion de clôture', icon: '📁' },
+                { id: 'rapport-final', label: 'Le rapport final', icon: '📁' }
+            ]
+        },
+        {
+            id: 'permanent',
+            label: 'Dossier Permanent',
+            icon: '📁',
+            children: []
+        },
+        {
+            id: 'donnees-externes',
+            label: 'Données Externes',
+            icon: '📁',
+            children: []
+        },
+        {
+            id: 'analyse-donnees',
+            label: 'Dossier Analyse de données',
+            icon: '📁',
+            children: []
+        },
+        {
+            id: 'dashboard',
+            label: 'Dossier Dashboard',
+            icon: '📁',
+            children: []
+        }
+    ];
+
+    // Mapping des mots-clés vers les rubriques
+    const KEYWORD_MAPPING = {
+        'programme de travail': 'programme-travail',
+        'programme-travail': 'programme-travail',
+        'programme travail': 'programme-travail',
+        'etape mission - programme': 'programme-travail',
+        'planification': 'planification',
+        'lettre de mission': 'lettre-mission',
+        'cartographie': 'cartographie-risques',
+        'risque': 'cartographie-risques',
+        'questionnaire': 'qci',
+        'qci': 'qci',
+        'contrôle interne': 'qci',
+        'frap': 'frap',
+        'révélation': 'frap',
+        'analyse de problème': 'frap',
+        'rapport final': 'rapport-final',
+        'rapport provisoire': 'rapport-provisoire',
+        'réunion de clôture': 'reunion-cloture',
+        'réunion d\'ouverture': 'reunion-ouverture',
+        'collecte documentaire': 'collecte-documentaire',
+        'prise de connaissance': 'collecte-documentaire',
+        'plan d\'approche': 'plan-approche',
+        'référentiel': 'plan-approche',
+        'forces et faiblesses': 'tffa',
+        'tffa': 'tffa',
+        'rapport d\'orientation': 'rapport-orientation',
+        'synthèse': 'synthese-frap',
+        'feuille couverture': 'feuille-couverture',
+        'plan pluriannuel': 'plan-pluriannuel',
+        'plan pluri-annuel': 'plan-pluriannuel',
+        'compte rendu': 'compte-rendu',
+        'rencontre': 'rencontre-direction',
+        'direction': 'rencontre-direction'
+    };
+
+    // ========================================
+    // UTILITAIRES
+    // ========================================
+    const debug = {
+        log: (...args) => CONFIG.debugMode && console.log('📁 [Dossier]', ...args),
+        error: (...args) => console.error('❌ [Dossier]', ...args),
+        warn: (...args) => console.warn('⚠️ [Dossier]', ...args)
+    };
+
+    // ========================================
+    // CLASSE PRINCIPALE
+    // ========================================
+    class DossierMissionMenu {
         constructor() {
-            this.menuElement = null;
-            this.isMenuVisible = false;
-            this.initialized = false;
-            this.openAccordions = new Set(); // Garder trace des accordéons ouverts
-
-            // Configuration
-            this.config = {
-                menuWidth: "50%",
-                animationDuration: 300,
-                autoRefreshInterval: 2000,
-            };
+            this.isOpen = false;
+            this.panel = null;
+            this.overlay = null;
+            this.expandedNodes = new Set(['preparation', 'realisation', 'conclusion']);
+            this.classifiedMessages = new Map(); // rubriqueId -> [messages]
+            this.init();
         }
 
-        // Initialise le gestionnaire de menu Dossier
         init() {
-            if (this.initialized) return;
-
-            console.log("📁 Initialisation du menu Dossier v2.0");
-            this.createMenuElement();
+            debug.log('Initialisation du menu Dossier Mission');
+            this.createPanel();
             this.attachEventListeners();
-            this.observeNewMessages();
-            this.initialized = true;
-
-            console.log("✅ Menu Dossier v2.0 initialisé avec succès");
+            debug.log('✅ Menu Dossier Mission initialisé');
         }
 
-        // Crée l'élément HTML du menu coulissant
-        createMenuElement() {
-            this.menuElement = document.createElement("div");
-            this.menuElement.id = "dossier-menu";
-            this.menuElement.className = "dossier-menu hidden";
-            this.menuElement.style.cssText = `
-        position: fixed;
-        top: 0;
-        right: 0;
-        width: ${this.config.menuWidth};
-        height: 100vh;
-        background: #1f2937;
-        border-left: 1px solid #374151;
-        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
-        z-index: 20000;
-        display: flex;
-        flex-direction: column;
-        transform: translateX(100%);
-        transition: transform ${this.config.animationDuration}ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      `;
 
-            // En-tête du menu
-            const header = document.createElement("div");
-            header.className = "dossier-menu-header";
-            header.style.cssText = `
-        padding: 20px;
-        background: #111827;
-        color: white;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #374151;
-      `;
+        // ========================================
+        // CRÉATION DU PANNEAU
+        // ========================================
+        createPanel() {
+            // Supprimer les éléments existants
+            const existingPanel = document.getElementById(CONFIG.panelId);
+            const existingOverlay = document.getElementById(CONFIG.overlayId);
+            if (existingPanel) existingPanel.remove();
+            if (existingOverlay) existingOverlay.remove();
 
-            header.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <span style="font-size: 24px;">📁</span>
-          <h2 style="margin: 0; font-size: 20px; font-weight: 600;">Dossier - Tables</h2>
-        </div>
-        <button id="dossier-close-btn" style="
-          background: rgba(255, 255, 255, 0.1);
-          border: none;
-          color: white;
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 20px;
-          transition: all 0.2s ease;
-        ">✕</button>
-      `;
+            // Créer l'overlay
+            this.overlay = document.createElement('div');
+            this.overlay.id = CONFIG.overlayId;
+            this.overlay.style.cssText = `
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.4);
+                backdrop-filter: blur(4px);
+                z-index: 99998;
+                display: none;
+                opacity: 0;
+                transition: opacity 0.2s ease-out;
+            `;
+            this.overlay.addEventListener('click', () => this.close());
+            document.body.appendChild(this.overlay);
 
-            // Zone de contenu avec accordéon
-            const content = document.createElement("div");
-            content.id = "dossier-menu-content";
-            content.className = "dossier-menu-content";
+            // Créer le panneau
+            this.panel = document.createElement('div');
+            this.panel.id = CONFIG.panelId;
+            this.panel.style.cssText = `
+                position: fixed;
+                top: 0;
+                right: 0;
+                height: 100%;
+                width: 50%;
+                min-width: 500px;
+                max-width: 800px;
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+                box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+                z-index: 99999;
+                display: none;
+                flex-direction: column;
+                transform: translateX(100%);
+                transition: transform 0.3s ease-out;
+                border-left: 1px solid rgba(255, 255, 255, 0.1);
+            `;
+
+            // Header du panneau
+            const header = this.createHeader();
+            this.panel.appendChild(header);
+
+            // Contenu TreeView
+            const content = document.createElement('div');
+            content.id = 'dossier-treeview-content';
             content.style.cssText = `
-        flex: 1;
-        overflow-y: auto;
-        padding: 20px;
-        background: #1f2937;
-      `;
+                flex: 1;
+                overflow-y: auto;
+                padding: 16px;
+            `;
+            this.panel.appendChild(content);
 
-            this.menuElement.appendChild(header);
-            this.menuElement.appendChild(content);
-            document.body.appendChild(this.menuElement);
-
-            // Événement de fermeture
-            const closeBtn = header.querySelector("#dossier-close-btn");
-            closeBtn.addEventListener("mouseenter", () => {
-                closeBtn.style.background = "rgba(255, 255, 255, 0.2)";
-                closeBtn.style.transform = "scale(1.1)";
-            });
-            closeBtn.addEventListener("mouseleave", () => {
-                closeBtn.style.background = "rgba(255, 255, 255, 0.1)";
-                closeBtn.style.transform = "scale(1)";
-            });
-            closeBtn.addEventListener("click", () => this.hideMenu());
+            document.body.appendChild(this.panel);
         }
 
-        // Attache les événements principaux
-        attachEventListeners() {
-            // Écouter les clics sur l'icône Dossier dans la sidebar
-            document.addEventListener("click", (e) => {
-                const dossierBtn = e.target.closest('[data-page="dossier"]');
-                if (dossierBtn) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.toggleMenu();
-                }
-            });
+        createHeader() {
+            const header = document.createElement('div');
+            header.style.cssText = `
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 16px 20px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                background: linear-gradient(90deg, rgba(236, 72, 153, 0.1) 0%, transparent 100%);
+            `;
 
-            // Fermer avec Escape
-            document.addEventListener("keydown", (e) => {
-                if (e.key === "Escape" && this.isMenuVisible) {
-                    this.hideMenu();
-                }
-            });
+            // Titre avec icône
+            const titleContainer = document.createElement('div');
+            titleContainer.style.cssText = `display: flex; align-items: center; gap: 12px;`;
 
-            // Rafraîchissement automatique
-            setInterval(() => {
-                if (this.isMenuVisible) {
-                    this.refreshAccordion();
-                }
-            }, this.config.autoRefreshInterval);
+            const iconBox = document.createElement('div');
+            iconBox.style.cssText = `
+                width: 40px;
+                height: 40px;
+                background: rgba(236, 72, 153, 0.2);
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+            `;
+            iconBox.textContent = '📁';
+
+            const titleText = document.createElement('div');
+            titleText.innerHTML = `
+                <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #fff;">Dossier de Mission</h2>
+                <p style="margin: 2px 0 0 0; font-size: 12px; color: rgba(255,255,255,0.6);">Structure d'audit interne</p>
+            `;
+
+            titleContainer.appendChild(iconBox);
+            titleContainer.appendChild(titleText);
+
+            // Boutons d'action
+            const actions = document.createElement('div');
+            actions.style.cssText = `display: flex; align-items: center; gap: 8px;`;
+
+            // Bouton Actualiser
+            const refreshBtn = document.createElement('button');
+            refreshBtn.innerHTML = '🔄';
+            refreshBtn.title = 'Actualiser';
+            refreshBtn.style.cssText = `
+                width: 36px;
+                height: 36px;
+                border: none;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+                transition: background 0.2s;
+            `;
+            refreshBtn.addEventListener('mouseenter', () => refreshBtn.style.background = 'rgba(255, 255, 255, 0.2)');
+            refreshBtn.addEventListener('mouseleave', () => refreshBtn.style.background = 'rgba(255, 255, 255, 0.1)');
+            refreshBtn.addEventListener('click', () => this.refreshContent());
+
+            // Bouton Fermer
+            const closeBtn = document.createElement('button');
+            closeBtn.innerHTML = '✕';
+            closeBtn.title = 'Fermer';
+            closeBtn.style.cssText = `
+                width: 36px;
+                height: 36px;
+                border: none;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+                color: #fff;
+                transition: background 0.2s;
+            `;
+            closeBtn.addEventListener('mouseenter', () => closeBtn.style.background = 'rgba(239, 68, 68, 0.3)');
+            closeBtn.addEventListener('mouseleave', () => closeBtn.style.background = 'rgba(255, 255, 255, 0.1)');
+            closeBtn.addEventListener('click', () => this.close());
+
+            actions.appendChild(refreshBtn);
+            actions.appendChild(closeBtn);
+
+            header.appendChild(titleContainer);
+            header.appendChild(actions);
+
+            return header;
         }
 
-        // Observer les nouveaux messages dans le chat
-        observeNewMessages() {
-            const observer = new MutationObserver(() => {
-                if (this.isMenuVisible) {
-                    this.refreshAccordion();
-                }
-            });
+        // ========================================
+        // GESTION OUVERTURE/FERMETURE
+        // ========================================
+        open() {
+            if (this.isOpen) return;
 
-            // Observer le conteneur de chat
-            const chatContainer = document.querySelector(".chat-messages, [data-clara-container]");
-            if (chatContainer) {
-                observer.observe(chatContainer, {
-                    childList: true,
-                    subtree: true,
-                });
-            }
-        }
+            debug.log('Ouverture du panneau Dossier Mission');
 
-        // Affiche le menu
-        showMenu() {
-            this.isMenuVisible = true;
-            this.menuElement.classList.remove("hidden");
+            // Afficher overlay et panneau
+            this.overlay.style.display = 'block';
+            this.panel.style.display = 'flex';
 
-            // Animation d'entrée
+            // Animation
             requestAnimationFrame(() => {
-                this.menuElement.style.transform = "translateX(0)";
+                this.overlay.style.opacity = '1';
+                this.panel.style.transform = 'translateX(0)';
             });
 
-            this.refreshAccordion();
-            console.log("📁 Menu Dossier affiché");
+            this.isOpen = true;
+
+            // Analyser et afficher le contenu
+            this.refreshContent();
+
+            // Écouter Escape
+            this.escapeHandler = (e) => {
+                if (e.key === 'Escape') this.close();
+            };
+            document.addEventListener('keydown', this.escapeHandler);
         }
 
-        // Masque le menu
-        hideMenu() {
-            this.isMenuVisible = false;
-            this.menuElement.style.transform = "translateX(100%)";
+        close() {
+            if (!this.isOpen) return;
 
+            debug.log('Fermeture du panneau Dossier Mission');
+
+            // Animation de fermeture
+            this.overlay.style.opacity = '0';
+            this.panel.style.transform = 'translateX(100%)';
+
+            // Masquer après animation
             setTimeout(() => {
-                this.menuElement.classList.add("hidden");
-            }, this.config.animationDuration);
+                this.overlay.style.display = 'none';
+                this.panel.style.display = 'none';
+            }, 300);
 
-            console.log("📁 Menu Dossier masqué");
+            this.isOpen = false;
+
+            // Retirer listener Escape
+            if (this.escapeHandler) {
+                document.removeEventListener('keydown', this.escapeHandler);
+            }
         }
 
-        // Bascule l'affichage du menu
-        toggleMenu() {
-            if (this.isMenuVisible) {
-                this.hideMenu();
+        toggle() {
+            if (this.isOpen) {
+                this.close();
             } else {
-                this.showMenu();
+                this.open();
             }
         }
 
-        // Rafraîchit le contenu de l'accordéon
-        refreshAccordion() {
-            const content = document.getElementById("dossier-menu-content");
-            if (!content) return;
+        // ========================================
+        // ANALYSE DES MESSAGES
+        // ========================================
+        analyzeMessages() {
+            debug.log('Analyse des messages du chat...');
 
-            // Récupérer tous les messages du système LLM avec des tables
-            const llmMessages = this.getLLMMessagesWithTables();
+            this.classifiedMessages.clear();
 
-            if (llmMessages.length === 0) {
-                content.innerHTML = `
-          <div style="
-            text-align: center;
-            padding: 40px 20px;
-            color: #9ca3af;
-          ">
-            <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
-            <p style="font-size: 16px; margin: 0;">Aucune table trouvée</p>
-            <p style="font-size: 14px; margin-top: 8px; opacity: 0.7;">
-              Les tables des messages LLM apparaîtront ici
-            </p>
-          </div>
-        `;
-                return;
-            }
+            // Trouver tous les messages du système LLM (assistant)
+            const messageContainers = document.querySelectorAll('[class*="message"], [class*="assistant"], [data-role="assistant"]');
 
-            // Créer les éléments d'accordéon
-            content.innerHTML = "";
-            llmMessages.forEach((messageData, index) => {
-                const accordionItem = this.createAccordionItem(messageData, index);
-                content.appendChild(accordionItem);
+            // Chercher aussi dans les conteneurs de chat typiques
+            const chatMessages = document.querySelectorAll('.prose, .markdown-body, [class*="chat-message"]');
+
+            // Combiner les sélecteurs
+            const allMessages = new Set([...messageContainers, ...chatMessages]);
+
+            debug.log(`${allMessages.size} conteneurs de messages trouvés`);
+
+            allMessages.forEach((container, index) => {
+                // Ignorer les messages utilisateur
+                if (container.closest('[data-role="user"]') ||
+                    container.classList.contains('user-message') ||
+                    container.querySelector('[data-role="user"]')) {
+                    return;
+                }
+
+                // Chercher les tables dans ce message
+                const tables = container.querySelectorAll('table');
+                if (tables.length === 0) return;
+
+                tables.forEach((table, tableIndex) => {
+                    const messageData = this.extractMessageData(table, container);
+                    if (messageData) {
+                        const rubriqueId = this.classifyMessage(messageData);
+
+                        if (!this.classifiedMessages.has(rubriqueId)) {
+                            this.classifiedMessages.set(rubriqueId, []);
+                        }
+
+                        this.classifiedMessages.get(rubriqueId).push({
+                            ...messageData,
+                            element: table,
+                            container: container,
+                            index: `${index}-${tableIndex}`
+                        });
+
+                        debug.log(`Table classée dans: ${rubriqueId}`, messageData.etapeMission || messageData.reference);
+                    }
+                });
             });
 
-            console.log(`✅ Accordéon rafraîchi: ${llmMessages.length} messages avec tables`);
+            debug.log(`Classification terminée: ${this.classifiedMessages.size} rubriques avec contenu`);
         }
 
-        // Récupère tous les messages LLM contenant des tables
-        getLLMMessagesWithTables() {
-            const messages = [];
+        extractMessageData(table, container) {
+            const data = {
+                etapeMission: '',
+                norme: '',
+                methode: '',
+                reference: '',
+                tables: []
+            };
 
-            // Sélecteur pour les messages de l'assistant (LLM)
-            const assistantMessages = document.querySelectorAll(
-                '.message-assistant, [data-role="assistant"], .prose.prose-base'
-            );
+            // Chercher les métadonnées dans la table ou le conteneur
+            const allText = table.textContent.toLowerCase();
+            const containerText = container.textContent.toLowerCase();
 
-            assistantMessages.forEach((messageDiv, index) => {
-                // Chercher les tables dans ce message
-                const tables = messageDiv.querySelectorAll(
-                    'table.min-w-full.border.border-gray-200.dark\\:border-gray-700.rounded-lg, table'
-                );
+            // Extraire depuis les cellules de la table
+            const rows = table.querySelectorAll('tr');
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td, th');
+                cells.forEach((cell, idx) => {
+                    const text = cell.textContent.trim();
+                    const textLower = text.toLowerCase();
 
-                if (tables.length > 0) {
-                    // Extraire le titre de la première table (première ligne, colonne Description)
-                    let title = `Message ${index + 1}`;
-
-                    const firstTable = tables[0];
-                    const firstRow = firstTable.querySelector("tbody tr, tr");
-                    if (firstRow) {
-                        const descriptionCell = firstRow.querySelector("td:first-child, th:first-child");
-                        if (descriptionCell && descriptionCell.textContent.trim()) {
-                            title = descriptionCell.textContent.trim().substring(0, 50);
-                            if (descriptionCell.textContent.trim().length > 50) {
-                                title += "...";
-                            }
-                        }
+                    // Détecter les champs clés
+                    if (textLower.includes('etape de mission') || textLower.includes('étape de mission')) {
+                        const nextCell = cells[idx + 1];
+                        if (nextCell) data.etapeMission = nextCell.textContent.trim();
+                    }
+                    if (textLower.includes('norme')) {
+                        const nextCell = cells[idx + 1];
+                        if (nextCell) data.norme = nextCell.textContent.trim();
+                    }
+                    if (textLower.includes('méthode') || textLower.includes('methode')) {
+                        const nextCell = cells[idx + 1];
+                        if (nextCell) data.methode = nextCell.textContent.trim();
+                    }
+                    if (textLower.includes('reference') || textLower.includes('référence')) {
+                        const nextCell = cells[idx + 1];
+                        if (nextCell) data.reference = nextCell.textContent.trim();
                     }
 
-                    messages.push({
-                        index,
-                        title,
-                        messageDiv,
-                        tables: Array.from(tables),
-                    });
-                }
+                    // Chercher directement dans le texte
+                    if (textLower === 'programme de travail') data.etapeMission = text;
+                    if (textLower.includes('programme-')) data.reference = text;
+                });
             });
 
-            return messages;
+            // Si pas de données extraites, utiliser le texte brut
+            if (!data.etapeMission && !data.reference) {
+                // Chercher des patterns dans le texte
+                for (const [keyword, rubrique] of Object.entries(KEYWORD_MAPPING)) {
+                    if (allText.includes(keyword) || containerText.includes(keyword)) {
+                        data.etapeMission = keyword;
+                        break;
+                    }
+                }
+            }
+
+            // Retourner null si aucune donnée pertinente
+            if (!data.etapeMission && !data.reference && !data.norme) {
+                return null;
+            }
+
+            return data;
         }
 
-        // Crée un élément d'accordéon avec VRAI accordéon (signe +)
-        createAccordionItem(messageData, index) {
-            const item = document.createElement("div");
-            item.className = "accordion-item";
-            item.style.cssText = `
-        margin-bottom: 12px;
-        border: 1px solid #374151;
-        border-radius: 8px;
-        overflow: hidden;
-        background: #374151;
-        transition: all 0.2s ease;
-      `;
+        classifyMessage(messageData) {
+            const searchText = `${messageData.etapeMission} ${messageData.reference} ${messageData.norme}`.toLowerCase();
 
-            const accordionId = `accordion-${index}`;
-            const isOpen = this.openAccordions.has(accordionId);
-
-            // En-tête de l'accordéon avec signe +
-            const header = document.createElement("div");
-            header.className = "accordion-header";
-            header.style.cssText = `
-        padding: 16px;
-        background: #374151;
-        cursor: pointer;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        transition: all 0.2s ease;
-        user-select: none;
-      `;
-
-            header.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
-          <span class="accordion-icon" style="
-            font-size: 20px;
-            font-weight: bold;
-            color: #10b981;
-            transition: transform 0.3s ease;
-            transform: rotate(${isOpen ? '45deg' : '0deg'});
-          ">${isOpen ? '✕' : '+'}</span>
-          <div style="flex: 1;">
-            <div style="font-weight: 600; color: #f9fafb; font-size: 14px;">
-              ${messageData.title}
-            </div>
-            <div style="font-size: 12px; color: #9ca3af; margin-top: 4px;">
-              ${messageData.tables.length} table${messageData.tables.length > 1 ? "s" : ""}
-            </div>
-          </div>
-        </div>
-      `;
-
-            // Contenu de l'accordéon - AFFICHAGE COMPLET DES TABLES
-            const content = document.createElement("div");
-            content.className = "accordion-content";
-            content.style.cssText = `
-        max-height: ${isOpen ? '10000px' : '0'};
-        overflow: hidden;
-        transition: max-height 0.3s ease;
-        background: #1f2937;
-      `;
-
-            const contentInner = document.createElement("div");
-            contentInner.style.cssText = `
-        padding: 16px;
-      `;
-
-            // Ajouter les TABLES COMPLÈTES (pas juste les miniatures)
-            messageData.tables.forEach((table, tableIndex) => {
-                const tableContainer = this.createFullTableDisplay(table, tableIndex, messageData.index);
-                contentInner.appendChild(tableContainer);
-            });
-
-            content.appendChild(contentInner);
-
-            // Événement de clic sur l'en-tête
-            header.addEventListener("click", () => {
-                const icon = header.querySelector(".accordion-icon");
-
-                if (this.openAccordions.has(accordionId)) {
-                    // Fermer
-                    this.openAccordions.delete(accordionId);
-                    content.style.maxHeight = "0";
-                    icon.style.transform = "rotate(0deg)";
-                    icon.textContent = "+";
-                    item.style.background = "#374151";
-                } else {
-                    // Ouvrir
-                    this.openAccordions.add(accordionId);
-                    content.style.maxHeight = "10000px";
-                    icon.style.transform = "rotate(45deg)";
-                    icon.textContent = "✕";
-                    item.style.background = "#1f2937";
+            // Chercher une correspondance dans le mapping
+            for (const [keyword, rubriqueId] of Object.entries(KEYWORD_MAPPING)) {
+                if (searchText.includes(keyword.toLowerCase())) {
+                    return rubriqueId;
                 }
-            });
+            }
 
-            // Effets hover
-            header.addEventListener("mouseenter", () => {
-                header.style.background = "#4b5563";
-            });
-            header.addEventListener("mouseleave", () => {
-                header.style.background = "#374151";
-            });
-
-            item.appendChild(header);
-            item.appendChild(content);
-
-            return item;
+            // Par défaut: Données Externes
+            return 'donnees-externes';
         }
 
-        // Crée l'affichage COMPLET d'une table (pas une miniature)
-        createFullTableDisplay(table, tableIndex, messageIndex) {
-            const container = document.createElement("div");
-            container.className = "table-full-display";
-            container.style.cssText = `
-        margin-bottom: 20px;
-        padding: 16px;
-        background: #111827;
-        border: 1px solid #374151;
-        border-radius: 8px;
-      `;
 
-            // Titre de la table
-            const title = document.createElement("div");
-            title.style.cssText = `
-        font-weight: 600;
-        color: #10b981;
-        font-size: 14px;
-        margin-bottom: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      `;
+        // ========================================
+        // RENDU DU TREEVIEW
+        // ========================================
+        refreshContent() {
+            debug.log('Actualisation du contenu TreeView');
 
-            const rows = table.querySelectorAll("tr");
-            const rowCount = rows.length;
-            const colCount = rows[0] ? rows[0].querySelectorAll("td, th").length : 0;
+            // Analyser les messages
+            this.analyzeMessages();
 
-            title.innerHTML = `
-        <span>📊 Table ${tableIndex + 1}</span>
-        <span style="font-size: 11px; color: #6b7280; font-weight: normal;">
-          ${rowCount} lignes × ${colCount} colonnes
-        </span>
-      `;
+            // Rendre le TreeView
+            const content = document.getElementById('dossier-treeview-content');
+            if (!content) return;
 
-            container.appendChild(title);
+            content.innerHTML = '';
 
-            // Cloner la table complète
-            const tableClone = table.cloneNode(true);
-            tableClone.style.cssText = `
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 12px;
-        background: #1f2937;
-        border-radius: 6px;
-        overflow: hidden;
-      `;
+            // Statistiques
+            const stats = this.createStatsSection();
+            content.appendChild(stats);
 
-            // Styler toutes les cellules
-            const allCells = tableClone.querySelectorAll("td, th");
-            allCells.forEach(cell => {
-                cell.style.cssText = `
-          border: 1px solid #374151;
-          padding: 8px;
-          color: #f9fafb;
-          text-align: left;
-        `;
+            // TreeView
+            const treeContainer = document.createElement('div');
+            treeContainer.style.cssText = 'margin-top: 16px;';
+
+            STRUCTURE_DOSSIER.forEach((node, index) => {
+                const isLast = index === STRUCTURE_DOSSIER.length - 1;
+                const nodeElement = this.renderTreeNode(node, 0, isLast, []);
+                treeContainer.appendChild(nodeElement);
             });
 
-            // Styler les en-têtes
-            const headers = tableClone.querySelectorAll("th");
-            headers.forEach(header => {
-                header.style.cssText = `
-          border: 1px solid #374151;
-          padding: 8px;
-          background: #374151;
-          color: #10b981;
-          font-weight: 600;
-          text-align: left;
-        `;
+            content.appendChild(treeContainer);
+        }
+
+        createStatsSection() {
+            const stats = document.createElement('div');
+            stats.style.cssText = `
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 16px;
+            `;
+
+            let totalMessages = 0;
+            this.classifiedMessages.forEach(messages => {
+                totalMessages += messages.length;
             });
 
-            // Wrapper avec scroll si nécessaire
-            const tableWrapper = document.createElement("div");
-            tableWrapper.style.cssText = `
-        overflow-x: auto;
-        max-height: 400px;
-        overflow-y: auto;
-      `;
-            tableWrapper.appendChild(tableClone);
+            stats.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: rgba(255,255,255,0.7); font-size: 13px;">📊 Tables classées</span>
+                    <span style="color: #fff; font-weight: 600; font-size: 16px;">${totalMessages}</span>
+                </div>
+                <div style="margin-top: 8px; font-size: 12px; color: rgba(255,255,255,0.5);">
+                    ${this.classifiedMessages.size} rubriques avec contenu
+                </div>
+            `;
 
-            container.appendChild(tableWrapper);
+            return stats;
+        }
 
-            // Bouton pour faire défiler vers la table originale
-            const scrollBtn = document.createElement("button");
-            scrollBtn.style.cssText = `
-        margin-top: 12px;
-        padding: 8px 16px;
-        background: #10b981;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 12px;
-        font-weight: 600;
-        transition: all 0.2s ease;
-        width: 100%;
-      `;
-            scrollBtn.textContent = "📍 Aller vers la table dans le chat";
+        renderTreeNode(node, level, isLast = false, parentLines = []) {
+            const container = document.createElement('div');
+            container.style.cssText = `position: relative;`;
 
-            scrollBtn.addEventListener("mouseenter", () => {
-                scrollBtn.style.background = "#059669";
-                scrollBtn.style.transform = "translateY(-2px)";
+            const hasChildren = node.children && node.children.length > 0;
+            const isExpanded = this.expandedNodes.has(node.id);
+            const messageCount = this.classifiedMessages.get(node.id)?.length || 0;
+
+            // Ligne du noeud avec lignes de connexion
+            const nodeRow = document.createElement('div');
+            nodeRow.style.cssText = `
+                display: flex;
+                align-items: center;
+                padding: 6px 8px;
+                border-radius: 4px;
+                cursor: pointer;
+                transition: background 0.2s;
+                margin: 1px 0;
+                position: relative;
+            `;
+            nodeRow.addEventListener('mouseenter', () => {
+                nodeRow.style.background = 'rgba(255, 255, 255, 0.1)';
             });
-            scrollBtn.addEventListener("mouseleave", () => {
-                scrollBtn.style.background = "#10b981";
-                scrollBtn.style.transform = "translateY(0)";
+            nodeRow.addEventListener('mouseleave', () => {
+                nodeRow.style.background = 'transparent';
             });
 
-            scrollBtn.addEventListener("click", () => {
-                this.scrollToTable(table);
-            });
+            // Dessiner les lignes verticales des parents
+            if (level > 0) {
+                for (let i = 0; i < level; i++) {
+                    if (parentLines[i]) {
+                        const verticalLine = document.createElement('span');
+                        verticalLine.style.cssText = `
+                            position: absolute;
+                            left: ${i * 20 + 8}px;
+                            top: 0;
+                            bottom: 0;
+                            width: 1px;
+                            background: rgba(255, 255, 255, 0.2);
+                        `;
+                        nodeRow.appendChild(verticalLine);
+                    }
+                }
 
-            container.appendChild(scrollBtn);
+                // Ligne horizontale vers le noeud
+                const horizontalLine = document.createElement('span');
+                horizontalLine.style.cssText = `
+                    position: absolute;
+                    left: ${(level - 1) * 20 + 8}px;
+                    top: 50%;
+                    width: 12px;
+                    height: 1px;
+                    background: rgba(255, 255, 255, 0.2);
+                `;
+                nodeRow.appendChild(horizontalLine);
+
+                // Ligne verticale du parent vers ce noeud (coude)
+                const cornerLine = document.createElement('span');
+                cornerLine.style.cssText = `
+                    position: absolute;
+                    left: ${(level - 1) * 20 + 8}px;
+                    top: 0;
+                    height: ${isLast ? '50%' : '100%'};
+                    width: 1px;
+                    background: rgba(255, 255, 255, 0.2);
+                `;
+                nodeRow.appendChild(cornerLine);
+            }
+
+            // Conteneur pour l'indentation
+            const indent = document.createElement('span');
+            indent.style.cssText = `width: ${level * 20}px; display: inline-block; flex-shrink: 0;`;
+            nodeRow.appendChild(indent);
+
+            // Chevron pour les noeuds avec enfants
+            if (hasChildren) {
+                const chevron = document.createElement('span');
+                chevron.textContent = isExpanded ? '▼' : '▶';
+                chevron.style.cssText = `
+                    font-size: 10px;
+                    color: rgba(255,255,255,0.5);
+                    margin-right: 6px;
+                    width: 12px;
+                    text-align: center;
+                    flex-shrink: 0;
+                `;
+                nodeRow.appendChild(chevron);
+
+                nodeRow.addEventListener('click', () => {
+                    if (this.expandedNodes.has(node.id)) {
+                        this.expandedNodes.delete(node.id);
+                    } else {
+                        this.expandedNodes.add(node.id);
+                    }
+                    this.refreshContent();
+                });
+            } else {
+                const spacer = document.createElement('span');
+                spacer.style.cssText = 'width: 18px; display: inline-block; flex-shrink: 0;';
+                nodeRow.appendChild(spacer);
+            }
+
+            // Icône
+            const icon = document.createElement('span');
+            icon.textContent = node.icon;
+            icon.style.cssText = 'margin-right: 8px; font-size: 16px; flex-shrink: 0;';
+            nodeRow.appendChild(icon);
+
+            // Label
+            const label = document.createElement('span');
+            label.textContent = node.label;
+            label.style.cssText = `
+                color: #fff;
+                font-size: 13px;
+                flex: 1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            `;
+            nodeRow.appendChild(label);
+
+            // Badge de comptage
+            if (messageCount > 0) {
+                const badge = document.createElement('span');
+                badge.textContent = messageCount;
+                badge.style.cssText = `
+                    background: rgba(236, 72, 153, 0.3);
+                    color: #ec4899;
+                    font-size: 11px;
+                    padding: 2px 8px;
+                    border-radius: 10px;
+                    font-weight: 600;
+                    flex-shrink: 0;
+                    margin-left: 8px;
+                `;
+                nodeRow.appendChild(badge);
+            }
+
+            container.appendChild(nodeRow);
+
+            // Enfants
+            if (hasChildren && isExpanded) {
+                const childrenContainer = document.createElement('div');
+                childrenContainer.style.cssText = 'position: relative;';
+
+                node.children.forEach((child, index) => {
+                    const isLastChild = index === node.children.length - 1;
+                    const newParentLines = [...parentLines, !isLast];
+                    const childElement = this.renderTreeNode(child, level + 1, isLastChild, newParentLines);
+                    childrenContainer.appendChild(childElement);
+                });
+
+                container.appendChild(childrenContainer);
+            }
+
+            // Messages classés dans cette rubrique
+            if (messageCount > 0 && !hasChildren) {
+                const messages = this.classifiedMessages.get(node.id);
+                messages.forEach(msg => {
+                    const msgItem = this.renderMessageItem(msg);
+                    msgItem.style.marginLeft = `${(level + 1) * 16}px`;
+                    container.appendChild(msgItem);
+                });
+            }
 
             return container;
         }
 
-        // Fait défiler vers une table spécifique
-        scrollToTable(table) {
-            if (!table) return;
+        renderMessageItem(msg) {
+            const item = document.createElement('div');
+            item.style.cssText = `
+                display: flex;
+                align-items: center;
+                padding: 6px 12px;
+                margin: 2px 0;
+                border-radius: 4px;
+                cursor: pointer;
+                background: rgba(255, 255, 255, 0.03);
+                transition: background 0.2s;
+            `;
 
-            // NE PAS fermer le menu - rester sur la page du chat
-            // this.hideMenu(); // SUPPRIMÉ
-
-            // Scroll vers la table
-            table.scrollIntoView({
-                behavior: "smooth",
-                block: "center",
+            item.addEventListener('mouseenter', () => {
+                item.style.background = 'rgba(236, 72, 153, 0.1)';
+            });
+            item.addEventListener('mouseleave', () => {
+                item.style.background = 'rgba(255, 255, 255, 0.03)';
             });
 
-            // Effet de surbrillance temporaire
-            const originalBorder = table.style.border;
-            const originalBoxShadow = table.style.boxShadow;
+            // Clic pour naviguer vers le message
+            item.addEventListener('click', () => {
+                if (msg.element) {
+                    msg.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    msg.element.style.outline = '2px solid #ec4899';
+                    setTimeout(() => {
+                        msg.element.style.outline = '';
+                    }, 2000);
+                }
+            });
 
-            table.style.border = "3px solid #10b981";
-            table.style.boxShadow = "0 0 20px rgba(16, 185, 129, 0.5)";
+            const icon = document.createElement('span');
+            icon.textContent = DOC_ICON;
+            icon.style.cssText = 'margin-right: 8px; font-size: 12px;';
+            item.appendChild(icon);
 
-            setTimeout(() => {
-                table.style.border = originalBorder;
-                table.style.boxShadow = originalBoxShadow;
-            }, 2000);
+            const text = document.createElement('span');
+            text.textContent = msg.etapeMission || msg.reference || 'Table';
+            text.style.cssText = `
+                color: rgba(255,255,255,0.8);
+                font-size: 12px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            `;
+            item.appendChild(text);
 
-            console.log("✅ Défilement vers la table effectué (menu reste ouvert)");
+            return item;
         }
 
-        // Nettoyage
-        destroy() {
-            if (this.menuElement) {
-                this.menuElement.remove();
-            }
-            this.initialized = false;
-            console.log("🗑️ Menu Dossier détruit");
+        // ========================================
+        // ÉVÉNEMENTS
+        // ========================================
+        attachEventListeners() {
+            // Écouter le clic sur le bouton Dossier dans la sidebar
+            document.addEventListener('click', (e) => {
+                const dossierButton = e.target.closest('[data-page="dossier"]');
+                if (dossierButton) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.toggle();
+                }
+            });
+
+            // Écouter l'événement personnalisé
+            document.addEventListener('dossier:toggle', () => {
+                this.toggle();
+            });
+
+            debug.log('Event listeners attachés');
         }
     }
 
-    // Initialisation automatique
-    const dossierMenu = new DossierMenuManager();
+    // ========================================
+    // INITIALISATION
+    // ========================================
 
     // Attendre que le DOM soit prêt
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", () => {
-            dossierMenu.init();
-        });
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initDossierMenu);
     } else {
-        dossierMenu.init();
+        initDossierMenu();
     }
 
-    // Exposer globalement pour debug
-    window.dossierMenu = dossierMenu;
+    function initDossierMenu() {
+        // Petit délai pour s'assurer que React a rendu la sidebar
+        setTimeout(() => {
+            window.dossierMissionMenu = new DossierMissionMenu();
+            debug.log('✅ Menu Dossier Mission prêt');
+        }, 500);
+    }
+
 })();

@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Échantillonnage & Analyse Fraude - ClaraVerse</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .methods-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .method-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid #dee2e6;
+            transition: all 0.3s;
+        }
+
+        .method-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: #4caf50;
+        }
+
+        .method-card.fraud {
+            background: linear-gradient(135deg, #fff5f5, #ffe0e0);
+            border-color: #e74c3c;
+        }
+
+        .method-card.fraud:hover {
+            border-color: #c0392b;
+        }
+
+        .method-card h3 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+
+        .method-card p {
+            margin: 0 0 15px 0;
+            color: #666;
+            font-size: 13px;
+        }
+
+        .method-card button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #4caf50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .method-card button:hover {
+            background: linear-gradient(135deg, #45a049, #388e3c);
+            transform: scale(1.02);
+        }
+
+        .method-card.fraud button {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .method-card.fraud button:hover {
+            background: linear-gradient(135deg, #c0392b, #a93226);
+        }
+
+        .test-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        .test-table th {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .test-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .test-table tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+
+        .test-table tr:hover {
+            background: #e3f2fd;
+        }
+
+        .results-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 2px dashed #dee2e6;
+            min-height: 100px;
+        }
+
+        .results-container h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+        }
+
+        #results {
+            white-space: pre-wrap;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .status {
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.info {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .shortcut {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: #495057;
+            margin-left: 8px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: #e9ecef;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: #3498db;
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎲 Test Échantillonnage & Analyse Fraude</h1>
+        <p class="subtitle">Méthodes ACL / IDEA / TeamMate Analytics - Module Complet</p>
+
+        <div id="status" class="status info">⏳ Vérification du backend...</div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('sampling')">🎲 Échantillonnage (6)</button>
+            <button class="tab" onclick="showTab('fraud')">🔍 Détection Fraude (8)</button>
+        </div>
+
+        <h2>📊 Table de Test (20 enregistrements)</h2>
+        <table class="test-table" id="testTable">
+            <thead>
+                <tr>
+                    <th>N°Facture</th>
+                    <th>Compte</th>
+                    <th>Libellé</th>
+                    <th>Montant</th>
+                    <th>Catégorie</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+
+        <!-- ONGLET ÉCHANTILLONNAGE -->
+        <div id="tab-sampling" class="tab-content active">
+            <h2>🔧 Méthodes d'Échantillonnage</h2>
+            <div class="methods-grid">
+                <div class="method-card">
+                    <h3>🎲 Aléatoire Simple <span class="shortcut">Ctrl+Shift+1</span></h3>
+                    <p>Sélection aléatoire de X enregistrements. Idéal pour tests de contrôle.</p>
+                    <button onclick="testSample('random', {sampleSize: 5})">Tester (5 éléments)</button>
+                </div>
+                <div class="method-card">
+                    <h3>📏 Systématique <span class="shortcut">Ctrl+Shift+2</span></h3>
+                    <p>Sélection tous les N enregistrements. Pour échantillonnage régulier.</p>
+                    <button onclick="testSample('systematic', {interval: 4})">Tester (intervalle 4)</button>
+                </div>
+                <div class="method-card">
+                    <h3>💰 Monétaire (MUS) <span class="shortcut">Ctrl+Shift+3</span></h3>
+                    <p>Échantillonnage proportionnel aux montants. Pour audit comptes.</p>
+                    <button onclick="testSample('monetary', {sampleSize: 6, monetaryColumn: 'Montant'})">Tester (6
+                        éléments)</button>
+                </div>
+                <div class="method-card">
+                    <h3>📊 Stratifié <span class="shortcut">Ctrl+Shift+4</span></h3>
+                    <p>Échantillon par sous-groupes. Pour représentativité par catégories.</p>
+                    <button onclick="testSample('stratified', {sampleSize: 8, stratifyColumn: 'Catégorie'})">Tester (8
+                        éléments)</button>
+                </div>
+                <div class="method-card">
+                    <h3>📌 Enregistrements Fixes <span class="shortcut">Ctrl+Shift+5</span></h3>
+                    <p>Sélection d'enregistrements spécifiques. Pour tests ciblés.</p>
+                    <button onclick="testSample('fixed', {fixedRecords: [0, 5, 10, 15, 19]})">Tester (indices
+                        0,5,10,15,19)</button>
+                </div>
+                <div class="method-card">
+                    <h3>🔄 Avec Remise <span class="shortcut">Ctrl+Shift+6</span></h3>
+                    <p>Tirage avec possibilité de répétition. Pour études statistiques.</p>
+                    <button onclick="testSample('with_replacement', {sampleSize: 8})">Tester (8 tirages)</button>
+                </div>
+            </div>
+            <div class="method-card"
+                style="background: linear-gradient(135deg, #fff3e0, #ffe0b2); border-color: #ff9800;">
+                <h3>📐 Calculer Taille Échantillon <span class="shortcut">Ctrl+Shift+S</span></h3>
+                <p>Détermination automatique de la taille selon niveau de confiance et erreur tolérable.</p>
+                <button onclick="testCalculateSize()"
+                    style="background: linear-gradient(135deg, #ff9800, #f57c00);">Calculer pour population de
+                    20</button>
+            </div>
+        </div>
+
+        <!-- ONGLET DÉTECTION FRAUDE -->
+        <div id="tab-fraud" class="tab-content">
+            <h2>🔍 Analyse & Détection de Fraude</h2>
+            <div class="methods-grid">
+                <div class="method-card fraud">
+                    <h3>👥 Doublons (DUPLICATES)</h3>
+                    <p>Détection des enregistrements dupliqués. Factures en double, paiements répétés.</p>
+                    <button onclick="testAnalysis('duplicates', {})">Tester Doublons</button>
+                </div>
+                <div class="method-card fraud">
+                    <h3>🔢 Trous Séquence (GAPS)</h3>
+                    <p>Identification des numéros manquants. Factures supprimées, bons de commande.</p>
+                    <button onclick="testAnalysis('gaps', {sequenceColumn: 'N°Facture'})">Tester Trous</button>
+                </div>
+                <div class="method-card fraud">
+                    <h3>📊 Loi de Benford</h3>
+                    <p>Test de conformité des premiers chiffres. Détection manipulation comptable.</p>
+                    <button onclick="testAnalysis('benford', {amountColumn: 'Montant'})">Tester Benford</button>
+                </div>
+                <div class="method-card fraud">
+                    <h3>🎯 Seuils Suspects</h3>
+                    <p>Transactions juste sous un seuil d'autorisation. Fractionnement frauduleux.</p>
+                    <button onclick="testAnalysis('threshold', {amountColumn: 'Montant', threshold: 10000})">Tester
+                        Seuil 10000</button>
+                </div>
+                <div class="method-card fraud">
+                    <h3>📅 Transactions Week-end</h3>
+                    <p>Opérations hors jours ouvrables. Activité suspecte samedi/dimanche.</p>
+                    <button onclick="testAnalysis('weekend', {dateColumn: 'Date'})">Tester Week-end</button>
+                </div>
+                <div class="method-card fraud">
+                    <h3>🔵 Montants Ronds</h3>
+                    <p>Détection montants arrondis suspects. Factures fictives, estimations.</p>
+                    <button onclick="testAnalysis('round_amounts', {amountColumn: 'Montant'})">Tester Montants
+                        Ronds</button>
+                </div>
+                <div class="method-card fraud">
+                    <h3>📈 Valeurs Aberrantes (Z-score)</h3>
+                    <p>Écarts significatifs à la moyenne. Transactions anormalement élevées/basses.</p>
+                    <button onclick="testAnalysis('outliers', {amountColumn: 'Montant', zScoreThreshold: 2.0})">Tester
+                        Outliers (Z>2)</button>
+                </div>
+                <div class="method-card fraud">
+                    <h3>📉 Changements Brutaux</h3>
+                    <p>Variations anormales entre périodes. Pics ou chutes suspects.</p>
+                    <button
+                        onclick="testAnalysis('period_changes', {amountColumn: 'Montant', dateColumn: 'Date'})">Tester
+                        Variations</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-container">
+            <h3>📋 Résultats</h3>
+            <div id="results">En attente d'un test...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:5000/echantillonnage';
+
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        // Générer des données de test avec cas de fraude
+        function generateTestData() {
+            const categories = ['A', 'B', 'C'];
+            const data = [];
+            // Données normales avec quelques anomalies pour tester la détection
+            const testCases = [
+                { numero: 1001, montant: 5000, categorie: 'A', date: '2024-01-15' },
+                { numero: 1002, montant: 9800, categorie: 'B', date: '2024-01-16' },  // Proche seuil 10000
+                { numero: 1003, montant: 3500, categorie: 'A', date: '2024-01-20' },  // Samedi
+                { numero: 1004, montant: 10000, categorie: 'C', date: '2024-01-22' }, // Montant rond
+                { numero: 1005, montant: 2500, categorie: 'B', date: '2024-01-23' },
+                // Trou: 1006 manquant
+                { numero: 1007, montant: 9500, categorie: 'A', date: '2024-01-25' },  // Proche seuil
+                { numero: 1008, montant: 5000, categorie: 'C', date: '2024-01-27' },  // Dimanche + Montant rond
+                { numero: 1009, montant: 15000, categorie: 'B', date: '2024-02-01' }, // Montant rond
+                { numero: 1010, montant: 4200, categorie: 'A', date: '2024-02-03' },
+                { numero: 1011, montant: 9900, categorie: 'C', date: '2024-02-05' },  // Proche seuil
+                { numero: 1012, montant: 3000, categorie: 'B', date: '2024-02-08' },  // Montant rond
+                { numero: 1013, montant: 75000, categorie: 'A', date: '2024-02-10' }, // Outlier élevé
+                { numero: 1014, montant: 4500, categorie: 'C', date: '2024-02-12' },
+                { numero: 1015, montant: 5000, categorie: 'B', date: '2024-02-14' },  // Montant rond
+                { numero: 1015, montant: 5000, categorie: 'B', date: '2024-02-14' },  // DOUBLON
+                { numero: 1016, montant: 8500, categorie: 'A', date: '2024-02-17' },  // Samedi
+                { numero: 1017, montant: 200, categorie: 'C', date: '2024-02-19' },   // Outlier bas
+                { numero: 1018, montant: 6000, categorie: 'B', date: '2024-02-21' },  // Montant rond
+                { numero: 1019, montant: 9950, categorie: 'A', date: '2024-02-23' },  // Très proche seuil
+                { numero: 1020, montant: 4800, categorie: 'C', date: '2024-02-25' }
+            ];
+
+            testCases.forEach((tc, i) => {
+                data.push({
+                    numero: tc.numero,
+                    compte: `${400 + i}`,
+                    libelle: `Transaction ${tc.numero}`,
+                    montant: tc.montant,
+                    categorie: tc.categorie,
+                    date: tc.date
+                });
+            });
+            return data;
+        }
+
+        function displayTestData(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = data.map(row => `
+                <tr>
+                    <td>${row.numero}</td>
+                    <td>${row.compte}</td>
+                    <td>${row.libelle}</td>
+                    <td>${new Intl.NumberFormat('fr-FR').format(row.montant)} FCFA</td>
+                    <td>${row.categorie}</td>
+                    <td>${row.date}</td>
+                </tr>
+            `).join('');
+        }
+
+        function getTableDataForAPI() {
+            const table = document.getElementById('testTable');
+            const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
+            const rows = Array.from(table.querySelectorAll('tbody tr')).map(tr =>
+                Array.from(tr.querySelectorAll('td')).map(td => td.textContent.trim())
+            );
+            return { tableId: 'test-table-1', headers, rows };
+        }
+
+        async function checkBackendStatus() {
+            const statusEl = document.getElementById('status');
+            try {
+                const response = await fetch(`${API_BASE}/status`);
+                if (response.ok) {
+                    const data = await response.json();
+                    statusEl.className = 'status success';
+                    statusEl.innerHTML = `✅ Backend connecté - Méthodes: ${data.methods_available.join(', ')}`;
+                } else {
+                    throw new Error('Backend non disponible');
+                }
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.innerHTML = `❌ Backend non connecté. Lancez: <code>python py_backend/main.py</code>`;
+            }
+        }
+
+        async function testSample(method, params) {
+            const resultsEl = document.getElementById('results');
+            resultsEl.textContent = `🔄 Échantillonnage ${method} en cours...`;
+
+            try {
+                const tableData = getTableDataForAPI();
+                const payload = {
+                    tables: [tableData],
+                    targetTableId: tableData.tableId,
+                    method: method,
+                    ...params
+                };
+
+                console.log('📤 Envoi:', payload);
+                const response = await fetch(`${API_BASE}/sample`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                console.log('📥 Résultat:', result);
+
+                if (result.success) {
+                    let output = `✅ ÉCHANTILLONNAGE ${method.toUpperCase()} RÉUSSI\n`;
+                    output += `${'═'.repeat(60)}\n\n`;
+                    output += `📊 Statistiques:\n`;
+                    output += `   Population: ${result.statistics.population_size}\n`;
+                    output += `   Échantillon: ${result.statistics.sample_size}\n`;
+                    output += `   Taux: ${result.statistics.sampling_rate}%\n`;
+                    if (result.statistics.sample_total) {
+                        output += `   Montant échantillon: ${new Intl.NumberFormat('fr-FR').format(result.statistics.sample_total)}\n`;
+                    }
+                    output += `\n📋 Échantillon sélectionné:\n`;
+                    output += `   ${result.sampleTable.headers.join(' | ')}\n`;
+                    output += `   ${'-'.repeat(70)}\n`;
+                    result.sampleTable.rows.forEach(row => {
+                        output += `   ${row.join(' | ')}\n`;
+                    });
+                    resultsEl.textContent = output;
+                } else {
+                    resultsEl.textContent = `❌ Erreur: ${result.message || 'Erreur inconnue'}`;
+                }
+            } catch (error) {
+                resultsEl.textContent = `❌ Erreur: ${error.message}`;
+                console.error(error);
+            }
+        }
+
+        async function testCalculateSize() {
+            const resultsEl = document.getElementById('results');
+            resultsEl.textContent = '🔄 Calcul de la taille d\'échantillon...';
+
+            try {
+                const response = await fetch(`${API_BASE}/calculate-size`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        populationSize: 20,
+                        confidenceLevel: 0.95,
+                        tolerableError: 0.05,
+                        expectedError: 0.01
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    let output = `✅ CALCUL TAILLE ÉCHANTILLON\n`;
+                    output += `${'═'.repeat(60)}\n\n`;
+                    output += `📊 Paramètres:\n`;
+                    output += `   Population: ${result.populationSize}\n`;
+                    output += `   Niveau de confiance: ${(result.confidenceLevel * 100).toFixed(0)}%\n`;
+                    output += `   Erreur tolérable: ${(result.tolerableError * 100).toFixed(1)}%\n`;
+                    output += `   Erreur attendue: ${(result.expectedError * 100).toFixed(1)}%\n\n`;
+                    output += `📐 Formule: ${result.formula}\n\n`;
+                    output += `➡️ TAILLE RECOMMANDÉE: ${result.sampleSize} enregistrements\n`;
+                    resultsEl.textContent = output;
+                } else {
+                    resultsEl.textContent = `❌ Erreur: ${result.message}`;
+                }
+            } catch (error) {
+                resultsEl.textContent = `❌ Erreur: ${error.message}`;
+            }
+        }
+
+        // ============================================
+        // TESTS ANALYSE DE FRAUDE
+        // ============================================
+        async function testAnalysis(method, params) {
+            const resultsEl = document.getElementById('results');
+            resultsEl.textContent = `🔍 Analyse ${method} en cours...`;
+
+            try {
+                const tableData = getTableDataForAPI();
+                const payload = {
+                    tables: [tableData],
+                    targetTableId: tableData.tableId,
+                    method: method,
+                    ...params
+                };
+
+                console.log('📤 Envoi analyse:', payload);
+                const response = await fetch(`${API_BASE}/analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                console.log('📥 Résultat analyse:', result);
+
+                if (result.success) {
+                    let output = `🔍 ANALYSE ${method.toUpperCase()} TERMINÉE\n`;
+                    output += `${'═'.repeat(60)}\n\n`;
+
+                    // Afficher les statistiques
+                    if (result.statistics) {
+                        output += `📊 Statistiques:\n`;
+                        for (const [key, value] of Object.entries(result.statistics)) {
+                            if (typeof value !== 'object') {
+                                output += `   ${key}: ${value}\n`;
+                            }
+                        }
+                        output += '\n';
+                    }
+
+                    // Afficher les résultats
+                    if (result.result && result.result.rows && result.result.rows.length > 0) {
+                        output += `⚠️ ${result.result.count} anomalie(s) détectée(s):\n`;
+                        output += `   ${result.result.headers.join(' | ')}\n`;
+                        output += `   ${'-'.repeat(70)}\n`;
+                        result.result.rows.forEach(row => {
+                            output += `   ${row.join(' | ')}\n`;
+                        });
+                    } else {
+                        output += `✅ Aucune anomalie détectée\n`;
+                    }
+
+                    output += `\n${result.message}`;
+                    resultsEl.textContent = output;
+                } else {
+                    resultsEl.textContent = `❌ Erreur: ${result.message || 'Erreur inconnue'}`;
+                }
+            } catch (error) {
+                resultsEl.textContent = `❌ Erreur: ${error.message}`;
+                console.error(error);
+            }
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', () => {
+            const testData = generateTestData();
+            displayTestData(testData);
+            checkBackendStatus();
+        });
+    </script>
+</body>
+
+</html>

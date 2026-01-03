@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Mail, Lock, Shield, Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
 import { db } from '../../db';
+import logo from '../../assets/logo.png';
 
 interface AuthPageProps {
   onSignIn: (userData: any) => void;
@@ -117,8 +118,8 @@ const AuthPage: React.FC<AuthPageProps> = ({ onSignIn, onSignUp, onAdminAccess }
       <div className="w-full max-w-md">
         {/* Logo et titre */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-purple-500 via-pink-500 to-sakura-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg p-3">
-            <img src="/logo.png" alt="E-audit Logo" className="w-full h-full object-contain" />
+          <div className="w-20 h-20 flex items-center justify-center mx-auto mb-4">
+            <img src={logo} alt="E-audit Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             Bienvenue sur E-audit

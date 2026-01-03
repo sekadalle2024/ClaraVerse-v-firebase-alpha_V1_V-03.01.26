@@ -86,6 +86,54 @@ try:
 except ImportError as e:
     logger.warning(f"⚠️ Pandas API not available: {e}")
 
+# Import and include the Pandas Agent router (LangChain + Gemini)
+try:
+    from pandas_agent import router as pandas_agent_router
+    app.include_router(pandas_agent_router)
+    logger.info("✅ Pandas Agent router loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Pandas Agent not available: {e}")
+
+# Import and include the Google Drive PDF Proxy router
+try:
+    from gdrive_proxy import router as gdrive_router
+    app.include_router(gdrive_router)
+    logger.info("✅ Google Drive PDF Proxy router loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Google Drive PDF Proxy not available: {e}")
+
+# Import and include the Word Export router
+try:
+    from word_export import router as word_router
+    app.include_router(word_router)
+    logger.info("✅ Word Export router loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Word Export not available: {e}")
+
+# Import and include the Lead Balance router (Pandas Lead)
+try:
+    from pandas_lead import router as lead_balance_router
+    app.include_router(lead_balance_router)
+    logger.info("✅ Lead Balance router loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Lead Balance not available: {e}")
+
+# Import and include the États Financiers SYSCOHADA router
+try:
+    from etats_financiers import router as etats_financiers_router
+    app.include_router(etats_financiers_router)
+    logger.info("✅ États Financiers SYSCOHADA router loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ États Financiers not available: {e}")
+
+# Import and include the Échantillonnage Audit router
+try:
+    from echantillonnage import router as echantillonnage_router
+    app.include_router(echantillonnage_router)
+    logger.info("✅ Échantillonnage Audit router loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Échantillonnage not available: {e}")
+
 # Import and include the diffusers API router
 # Add CORS middleware
 app.add_middleware(
